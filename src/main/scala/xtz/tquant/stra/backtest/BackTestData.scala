@@ -186,9 +186,15 @@ class BackTestDataProvider(runner: BackTestRunner) extends DataApi {
         val future_bar = bars.filter(_.time >= time)
         if (future_bar.isEmpty ) return (null, "market closed")
 
+        var last = 0.0
+        if (time >= 150000000)
+            last = future_bar.last.open
+        else
+            last = future_bar.head.open
+
         val q = DataApi.MarketQuote(code, date, time, runner.trading_day,
             0.0, 0.0, 0.0, 0.0, // fixme, OHLC
-            future_bar(0).open, // last
+            last,
             0.0, 0.0,
             0.0, // pre_close
             0, 0.0, // volume, turnover

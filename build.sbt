@@ -27,6 +27,9 @@ libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" 
 
 libraryDependencies += "com.fasterxml.jackson.dataformat" % "jackson-dataformat-csv" % "2.7.3"
 
+libraryDependencies += "com.tictactec" % "ta-lib" % "0.4.0"
+
+
 
 
 packAutoSettings

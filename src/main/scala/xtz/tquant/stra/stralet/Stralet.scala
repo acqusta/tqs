@@ -39,9 +39,9 @@ trait StraletContext {
 
     def postMsg(msg: Any)
 
-    def getTradeApi() : TradeApi
+    def getTradeApi : TradeApi
 
-    def getDataApi() : DataApi
+    def getDataApi : DataApi
 
     def subscribeQuote( codes: Seq[String])
 

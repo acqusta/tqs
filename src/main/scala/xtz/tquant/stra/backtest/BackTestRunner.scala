@@ -91,7 +91,7 @@ case class BackTestRunner (
 
     def init(): Unit = {
         data_sim.init()
-        exch_sim.init(100000000.0) // Set init_balance
+        exch_sim.init(1000000.0) // Set init_balance
     }
 
 
@@ -124,6 +124,8 @@ case class BackTestRunner (
 
         val begin_time = LocalDateTime.of(day, LocalTime.of(9, 30,0))
         val end_time = LocalDateTime.of(day, LocalTime.of(15,0,0))
+        val time_1130 = LocalDateTime.of(day, LocalTime.of(11,30,0))
+        val time_1300 = LocalDateTime.of(day, LocalTime.of(13,0,0))
 
         sim_time = begin_time
 
@@ -154,6 +156,8 @@ case class BackTestRunner (
             if (!bar_time.isAfter(sim_time)){
                 stralet.onBar( data_sim.bars(context.bar_codes))
                 bar_time = bar_time.plusSeconds(60)
+                if (bar_time.isAfter(time_1130) && bar_time.isBefore(time_1300))
+                    bar_time = time_1300.plusSeconds(60)
             }
             if (!cycle_time.isAfter(sim_time)) {
                 stralet.onCycle()
@@ -175,7 +179,6 @@ case class BackTestRunner (
 
         stralet.onFini()
         // TODO: Save test data
-
     }
 
 }

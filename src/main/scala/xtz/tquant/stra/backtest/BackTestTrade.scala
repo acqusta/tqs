@@ -43,11 +43,33 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
         else {
             val data = new TradeData()
             data.trading_day = next_trading_day
-            data.positions ++= cur_data.positions.filter(_._2.current_size != 0)
             data.balance.init_balance = cur_data.balance.enable_balance
+            data.balance.enable_balance =  cur_data.balance.enable_balance
+
+            for( (code, pos) <- cur_data.positions if pos.current_size !=0) {
+                data.positions +=
+                    code ->
+                        TradeApi.Position(
+                            account_id = pos.account_id,
+                            code = pos.code,
+                            name = pos.name,
+                            current_size = pos.current_size,
+                            enable_size = pos.current_size,
+                            side = pos.side,
+                            cost = pos.cost,
+                            cost_price = pos.cost_price,
+                            last_price = 0.0,
+                            holding_pnl = 0.0,
+                            margin = 0.0
+                        )
+            }
 
             his_data += cur_data
             cur_data = data
+
+            println(s"-- new trading day $next_trading_day")
+            println(s"enable_balance: ${data.balance.init_balance}")
+            data.positions.foreach( println _)
         }
     }
 
@@ -120,7 +142,7 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
                 }
             case "SELL" =>
                 val pos = cur_data.positions.getOrElse( code, null)
-                if (pos != null && pos.enable_size > size) {
+                if (pos != null && pos.enable_size >= size) {
                     val cost = price * size
                     cur_data.positions += code -> TradeApi.Position (
                         account_id  = pos.account_id,
@@ -135,6 +157,7 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
                         holding_pnl = 0.0,
                         margin      = 0.0
                     )
+                    cur_data.balance.enable_balance += cost
                     (true, "")
                 } else {
                     (false, "no enough enable_size")
@@ -203,8 +226,22 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
 
     def placeOrder(code : String, price : Double, size : Int, action : String) : (String, String) = {
 
+        val (date, time) = this.sim.getSimTime()
+        if (time < 93000000 || (time>113000000 && time < 1300000) || time > 150000000) {
+            println("ERROR: place order when market is closed!")
+            return (null, "market is closed")
+        }
+
+        if (code.endsWith(".SZ") && time > 145700000) {
+            println("ERROR: forbid placing order to SZ market after 145700")
+            return (null, "SZ market is closed")
+        }
+
         val (success, msg) = tryMatchDeal(code, price, size, action)
         val entrust_no = insertOrder(success, code, price, size, action)
+
+
+        println(s"place order: $date $time $code $price $size $action result: $entrust_no $msg")
 
         if (success)
             (entrust_no, "")
