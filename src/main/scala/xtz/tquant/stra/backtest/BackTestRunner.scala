@@ -7,6 +7,7 @@ import scala.io.Source
 import xtz.tquant.api.scala.{DataApi, JsonHelper, TradeApi}
 import xtz.tquant.stra.stralet.impl.StraletConfigImpl
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
+import xtz.tquant.stra.utils.TimeUtils._
 
 object BackTest {
 
@@ -52,28 +53,6 @@ object BackTest {
     }
 }
 
-object TimeUtils {
-
-    implicit class LocalTimeConvertor(time: LocalTime) {
-        def toHumanMilli = {
-            (time.getHour * 10000 + time.getMinute * 100 + time.getSecond) * 1000 + time.getNano / 1000000
-        }
-
-        def toHumanSecond = {
-            time.getHour * 10000 + time.getMinute * 100 + time.getSecond
-        }
-    }
-
-    implicit class LocalDateConvertor(date: LocalDate) {
-        def toHumanDay =
-            date.getYear * 10000 + date.getMonthValue * 100 + date.getDayOfMonth
-
-    }
-
-}
-
-import TimeUtils._
-
 case class BackTestRunner (
         servlet_class : Class[Stralet],
         universe : Seq[String],
@@ -109,13 +88,18 @@ case class BackTestRunner (
     def run(): Unit = {
 
         val days = last_date.toEpochDay - first_date.toEpochDay
-        //for ( days <- until)
+
         var day = first_date
         for ( i <- 0L to days ) {
             if (data_sim.calendar.contains(day))
                 runOneDay( day)
             day = day.plusDays(1)
         }
+
+        val order_file = s"SimOrder-${servlet_class.getName}-$first_date-$last_date-${System.currentTimeMillis}.csv"
+        exch_sim.saveOrder(order_file)
+
+
     }
 
     def runOneDay(day : LocalDate): Unit = {
@@ -123,9 +107,9 @@ case class BackTestRunner (
         trading_day = day.toHumanDay
 
         val begin_time = LocalDateTime.of(day, LocalTime.of(9, 30,0))
-        val end_time = LocalDateTime.of(day, LocalTime.of(15,0,0))
-        val time_1130 = LocalDateTime.of(day, LocalTime.of(11,30,0))
-        val time_1300 = LocalDateTime.of(day, LocalTime.of(13,0,0))
+        val end_time   = LocalDateTime.of(day, LocalTime.of(15,0,0))
+        val time_1130  = LocalDateTime.of(day, LocalTime.of(11,30,0))
+        val time_1300  = LocalDateTime.of(day, LocalTime.of(13,0,0))
 
         sim_time = begin_time
 
@@ -178,7 +162,6 @@ case class BackTestRunner (
         }
 
         stralet.onFini()
-        // TODO: Save test data
     }
 
 }
@@ -214,6 +197,14 @@ class BackTestContext (runner: BackTestRunner, data_api: DataApi, trade_api: Tra
     override def subscribeBar( codes: Seq[String]) = {
         bar_codes = bar_codes.union(codes).toSeq
         data_api.subscribe(bar_codes)
+    }
+
+    /**
+      * TODO: Save to file
+      * @param data
+      */
+    override def log(data: Any) :Unit = {
+        println(data)
     }
 
     // return 100 days after so no timer will be executed indeed

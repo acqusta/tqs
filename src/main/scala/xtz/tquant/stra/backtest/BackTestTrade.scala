@@ -1,9 +1,16 @@
 package xtz.tquant.stra.backtest
 
+import java.io.FileWriter
+
+import scala.io
 import java.time.LocalDate
+
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonPropertyOrder}
 
 import scala.collection.mutable
 import xtz.tquant.api.scala.TradeApi
+import xtz.tquant.stra.backtest.ExchangeAccount.OrderSaveData
+import xtz.tquant.stra.utils.TimeUtils._
 
 object ExchangeAccount {
 
@@ -20,6 +27,26 @@ object ExchangeAccount {
         val trades = mutable.ListBuffer[TradeApi.Trade]()
         val balance = new Balance()
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonPropertyOrder(Array("ID", "DATE","CODE","ENTRUST_ACTION","ENTRUST_DATE","ENTRUST_TIME","ENTRUST_PRICE","ENTRUST_SIZE",
+        "FILL_SIZE", "FILL_PRICE", "ENTRUST_NO", "STATUS", "STATUS_MSG" ))
+    case class OrderSaveData(
+            ID              : String,
+            DATE            : Int,
+            CODE            : String,
+            ENTRUST_ACTION  : String,
+            ENTRUST_DATE    : Long,
+            ENTRUST_TIME    : Long,
+            ENTRUST_PRICE   : Double,
+            ENTRUST_SIZE    : Long,
+            FILL_SIZE       : Long,
+            FILL_PRICE      : Double,
+            ENTRUST_NO      : String,
+            STATUS          : String,
+            STATUS_MSG      : String
+    )
+
 }
 
 class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
@@ -318,6 +345,43 @@ class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
             act.cancelOrder(code, entrust_no)
         else
             (false, "unkown account")
+    }
+
+    def saveOrder(path: String): Unit = {
+        val orders = mutable.ArrayBuffer[OrderSaveData]()
+        for ( (id, act) <- accounts ) {
+
+            for ( data <- act.his_data) {
+                val trading_day = data.trading_day.toHumanDay
+
+                orders ++= data.orders.map( ord =>
+                                OrderSaveData(
+                                        ID              = id,
+                                        DATE            = trading_day,
+                                        CODE            = ord.code ,
+                                        ENTRUST_ACTION  = ord.entrust_action ,
+                                        ENTRUST_DATE    = trading_day ,
+                                        ENTRUST_TIME    = ord.entrust_time ,
+                                        ENTRUST_PRICE   = ord.entrust_price ,
+                                        ENTRUST_SIZE    = ord.entrust_size ,
+                                        FILL_SIZE       = ord.fill_size ,
+                                        FILL_PRICE      = ord.fill_price ,
+                                        ENTRUST_NO      = ord.entrust_no ,
+                                        STATUS          = ord.status ,
+                                        STATUS_MSG      = "" )
+                        )
+            }
+        }
+
+        val text = CsvHelper.serialize(orders)
+
+        val stream = new java.io.FileOutputStream(path)
+        //val writer = new FileWriter(path)
+        stream.write( text.getBytes("utf8"))
+    }
+
+    def savePostion(path: String) : Unit = {
+
     }
 }
 

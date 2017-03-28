@@ -18,13 +18,14 @@ class DemoStralet extends Stralet {
     var data_api  : DataApi = _
 
     override def onInit(cfg: StraletConfig): Unit = {
-        println("DemoStralet onInit ", cfg.context.getTime())
-
         this.cfg = cfg
         this.context = cfg.context
         this.trade_api = context.getTradeApi
         this.data_api = context.getDataApi
         this.stk_account = cfg.parameters.getOrElse("stk_account", "").asInstanceOf[String]
+
+        context.log("DemoStralet onInit ", cfg.context.getTime())
+
 
         context.subscribeBar(cfg.universe)
 
@@ -34,16 +35,16 @@ class DemoStralet extends Stralet {
         var value = balance.enable_balance
         for (pos <- positions) {
             val (q, _) = data_api.quote(pos.code)
-            println( pos.code, pos.current_size, q.last)
+            context.log( pos.code, pos.current_size, q.last)
             value += q.last * pos.current_size
         }
 
-        println(s"value: $value")
+        context.log(s"value: $value")
 
     }
 
     override def onFini() = {
-        println("DemoStralet onFini ", cfg.context.getTime())
+        context.log("DemoStralet onFini ", cfg.context.getTime())
 
         val (positions, _) = trade_api.queryPosition(this.stk_account)
         val (balance, _) = trade_api.queryBalance(this.stk_account)
@@ -52,11 +53,11 @@ class DemoStralet extends Stralet {
 
         for (pos <- positions) {
             val (q, _) = data_api.quote(pos.code)
-            println( pos.code, pos.current_size, q.last)
+            context.log( pos.code, pos.current_size, q.last)
             value += q.last * pos.current_size
         }
 
-        println(s"value: $value")
+        context.log(s"value: $value")
     }
 
     override def onQuote(q: MarketQuote) = {
@@ -64,8 +65,6 @@ class DemoStralet extends Stralet {
     }
 
     override def onBar(bars: Map[String, Seq[Bar]]): Unit = {
-        //println("DemoStralet onBar " + context.getTimeAsInt())
-        //bar foreach println _
 
         // MA5 > MA60 BUY
         // MA60 < MA5 SELL
@@ -126,6 +125,6 @@ class DemoStralet extends Stralet {
 
     override def onCycle(): Unit = {
         val (date, time) = context.getTimeAsInt()
-        println(s"onCycle $date $time")
+        context.log(s"onCycle $date $time")
     }
 }

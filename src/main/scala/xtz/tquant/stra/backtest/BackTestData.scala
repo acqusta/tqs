@@ -1,6 +1,6 @@
 package xtz.tquant.stra.backtest
 
-import java.io.File
+import java.io.{File, StringWriter}
 import java.lang.reflect.{ParameterizedType, Type}
 import java.time.LocalDate
 
@@ -12,13 +12,12 @@ import com.fasterxml.jackson.dataformat.csv.{CsvMapper, CsvSchema}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import xtz.tquant.api.scala.DataApi
 
-import scala.beans.BeanProperty
 import scala.collection.mutable
 import scala.io.Source
 
 
 object BackTestDataProvider {
-    //
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonPropertyOrder(Array("DATE","TIME","OPEN","HIGH","LOW","CLOSE","VOLUME","TURNOVER"))
     case class Bar(
@@ -46,7 +45,16 @@ object CsvHelper {
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 
-    def serialize(value: Any): String = mapper.writeValueAsString(value)
+    def serialize[T:Manifest](values: Seq[T]): String = {
+        val writer = new StringWriter()
+
+        val schema = mapper.schemaFor(typeReference[T]).withHeader()
+        val csv_writer = mapper.writerFor(typeReference[T]).`with`(schema).writeValues(writer)
+
+        values foreach { csv_writer.write(_) }
+
+        writer.toString()
+    }
 
     def deserialize[T: Manifest](value: String) : Seq[T] = {
         val schema = mapper.schemaFor(typeReference[T]).withHeader()
@@ -157,7 +165,7 @@ class BackTestDataProvider(runner: BackTestRunner) extends DataApi {
       * @return
       */
     override def bar(code : String, cycle : String, trading_day : Int) : (Seq[DataApi.Bar], String) = {
-        if (cycle != "1m") return (null, "unsupport cycle " + cycle)
+        if (cycle != "1m") return (null, "unsupported cycle " + cycle)
 
         val (date, time) = runner.getSimTimeAsInt()
         if (trading_day > runner.trading_day ) return (null, "future trading_day")

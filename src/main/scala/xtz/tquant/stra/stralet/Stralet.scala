@@ -46,6 +46,8 @@ trait StraletContext {
     def subscribeQuote( codes: Seq[String])
 
     def subscribeBar( codes: Seq[String])
+
+    def log(data : Any) : Unit
 }
 
 trait StraletConfig {
