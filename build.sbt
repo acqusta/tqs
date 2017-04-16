@@ -18,9 +18,7 @@ javacOptions   ++= Seq("-encoding", "UTF-8")
 //libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.20"
 
 
-libraryDependencies += "org.zeromq"          % "jeromq"        % "0.3.5"
-
-
+libraryDependencies += "org.zeromq"                    % "jeromq"               % "0.3.5"
 libraryDependencies += "com.fasterxml.jackson.core"    % "jackson-core"         % "2.7.3"
 libraryDependencies += "com.fasterxml.jackson.core"    % "jackson-annotations"  % "2.7.3"
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.7.3"

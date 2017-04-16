@@ -115,9 +115,8 @@ class BackTestDataProvider(runner: BackTestRunner) extends DataApi {
 
     def loadBar(code : String, trading_day: Int) : Seq[DataApi.Bar] = {
 
-        //println(s"load bar $code $trading_day")
-
-        val path = s"$data_home/1m/$code/$code-$trading_day.csv"
+        val mkt = code.split('.').last
+        val path = s"$data_home/1m/$mkt/$code/$code-$trading_day.csv"
 
         val orig_bars = CsvHelper.deserialize[Bar]( Source.fromFile(path).mkString)
         val bars = mutable.ListBuffer[DataApi.Bar]()

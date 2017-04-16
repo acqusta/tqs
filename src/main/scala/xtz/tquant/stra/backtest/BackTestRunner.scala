@@ -97,7 +97,7 @@ case class BackTestRunner (
             day = day.plusDays(1)
         }
 
-        val order_file = s"SimOrder-$servlet_id-$first_date-$last_date-${System.currentTimeMillis}.csv"
+        val order_file = s"SimOrder-$servlet_id-${first_date.toHumanDay}-${last_date.toHumanDay}-${System.currentTimeMillis}.csv"
         exch_sim.saveOrder(order_file)
 
     }
