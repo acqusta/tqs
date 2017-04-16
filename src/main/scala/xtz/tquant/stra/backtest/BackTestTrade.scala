@@ -95,8 +95,8 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
             cur_data = data
 
             println(s"-- new trading day $next_trading_day")
-            println(s"enable_balance: ${data.balance.init_balance}")
-            data.positions.foreach( println _)
+            //println(s"enable_balance: ${data.balance.init_balance}")
+//            data.positions.foreach( println _)
         }
     }
 
@@ -268,7 +268,7 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
         val entrust_no = insertOrder(success, code, price, size, action)
 
 
-        println(s"place order: $date $time $code $price $size $action result: $entrust_no $msg")
+        println(s"place order: $date $time $code $price $size $action, result($entrust_no, $msg)")
 
         if (success)
             (entrust_no, "")

@@ -29,7 +29,7 @@ libraryDependencies += "com.fasterxml.jackson.dataformat" % "jackson-dataformat-
 
 libraryDependencies += "com.tictactec" % "ta-lib" % "0.4.0"
 
-
+libraryDependencies += "commons-cli" % "commons-cli" % "1.3"
 
 
 packAutoSettings

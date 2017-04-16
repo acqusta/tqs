@@ -115,7 +115,7 @@ class BackTestDataProvider(runner: BackTestRunner) extends DataApi {
 
     def loadBar(code : String, trading_day: Int) : Seq[DataApi.Bar] = {
 
-        println(s"load bar $code $trading_day")
+        //println(s"load bar $code $trading_day")
 
         val path = s"$data_home/1m/$code/$code-$trading_day.csv"
 

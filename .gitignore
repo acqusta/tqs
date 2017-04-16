@@ -3,3 +3,5 @@
 target
 project/target
 project/project
+etc/mystudy*
+src/main/mystudy*

@@ -13,7 +13,7 @@ object BackTest {
 
     def ymdToDate(ymd: Int) : LocalDate = LocalDate.of( ymd / 10000, (ymd%10000)/100, (ymd%100))
 
-    case class StraletInstance (
+    case class StraletInstanceConfig(
         id : String,
         stralet_class: String,
         universe:   Seq[String],
@@ -26,7 +26,7 @@ object BackTest {
         accounts:   Seq[String]
     )
     case class BackTestStraletConfig (
-        stralet : StraletInstance,
+        stralet : StraletInstanceConfig,
         backtest : BackTestConfig
     )
 
@@ -42,7 +42,7 @@ object BackTest {
             val first_date = if (date_range(0) != 0 ) ymdToDate(date_range(0)) else LocalDate.now()
             val last_date   = if (date_range(1) != 0 ) ymdToDate(date_range(1)) else LocalDate.now()
 
-            val runner = new BackTestRunner(clazz, config.stralet.universe,
+            val runner = new BackTestRunner(config.stralet.id, clazz, config.stralet.universe,
                 config.backtest.accounts, config.stralet.parameters, first_date, last_date)
             runner.init()
 
@@ -54,6 +54,7 @@ object BackTest {
 }
 
 case class BackTestRunner (
+        servlet_id    : String,
         servlet_class : Class[Stralet],
         universe : Seq[String],
         accounts : Seq[String],
@@ -96,9 +97,8 @@ case class BackTestRunner (
             day = day.plusDays(1)
         }
 
-        val order_file = s"SimOrder-${servlet_class.getName}-$first_date-$last_date-${System.currentTimeMillis}.csv"
+        val order_file = s"SimOrder-$servlet_id-$first_date-$last_date-${System.currentTimeMillis}.csv"
         exch_sim.saveOrder(order_file)
-
 
     }
 
