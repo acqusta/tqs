@@ -151,7 +151,12 @@ class BackTestDataProvider(runner: BackTestRunner) extends DataApi {
         today_bars.map{ case (code, bars) => code -> bars.filter( _.time <= time) }
     }
 
-    override def tick(code : String, trading_day : Int) : (Seq[DataApi.MarketQuote], String) = {
+    def nextBar(code : String, cycle: String) : Seq[DataApi.Bar] = {
+        // TO BE IMPLEMENT
+        null
+    }
+
+    def nextQuote(code : String) : DataApi.MarketQuote = {
         null
     }
 

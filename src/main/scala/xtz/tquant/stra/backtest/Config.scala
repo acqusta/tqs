@@ -1,6 +1,6 @@
 package xtz.tquant.stra.backtest
 
-import xtz.tquant.api.scala.JsonHelper
+import xtz.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
 
@@ -11,7 +11,8 @@ import scala.io.Source
 object Config {
 
     case class DataProviderConfig (
-        data_home : String
+        data_home : String,
+        tqc_addr : String
     )
 
     case class AllConfig (

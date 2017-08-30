@@ -1,18 +1,13 @@
 package xtz.tquant.stra.backtest
 
-import java.io.FileWriter
-
-import scala.io
 import java.time.LocalDate
-
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonPropertyOrder}
 
 import scala.collection.mutable
 import xtz.tquant.api.scala.TradeApi
-import xtz.tquant.stra.backtest.ExchangeAccount.OrderSaveData
-import xtz.tquant.stra.utils.TimeUtils._
+import xtz.tquant.api.scala.TradeApi.{Callback, OrderID}
+import xtz.tquant.stra.utils.CsvHelper
 
-object ExchangeAccount {
+object SimAccount {
 
     class Balance {
         var init_balance = 0.0
@@ -27,31 +22,11 @@ object ExchangeAccount {
         val trades = mutable.ListBuffer[TradeApi.Trade]()
         val balance = new Balance()
     }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    @JsonPropertyOrder(Array("ID", "DATE","CODE","ENTRUST_ACTION","ENTRUST_DATE","ENTRUST_TIME","ENTRUST_PRICE","ENTRUST_SIZE",
-        "FILL_SIZE", "FILL_PRICE", "ENTRUST_NO", "STATUS", "STATUS_MSG" ))
-    case class OrderSaveData(
-            ID              : String,
-            DATE            : Int,
-            CODE            : String,
-            ENTRUST_ACTION  : String,
-            ENTRUST_DATE    : Long,
-            ENTRUST_TIME    : Long,
-            ENTRUST_PRICE   : Double,
-            ENTRUST_SIZE    : Long,
-            FILL_SIZE       : Long,
-            FILL_PRICE      : Double,
-            ENTRUST_NO      : String,
-            STATUS          : String,
-            STATUS_MSG      : String
-    )
-
 }
 
-class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
+class SimAccount(sim: SimTradeApi, account_id : String) {
 
-    import ExchangeAccount._
+    import SimAccount._
 
     var cur_data : TradeData = _
     var his_data = mutable.ListBuffer[TradeData]()
@@ -63,7 +38,7 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
         cur_data.balance.enable_balance = init_balance
     }
 
-    def moveOn(next_trading_day: LocalDate): Unit = {
+    def moveTo(next_trading_day: LocalDate): Unit = {
         if (cur_data.trading_day == null) {
             cur_data.trading_day = next_trading_day
         }
@@ -77,24 +52,24 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
                 data.positions +=
                     code ->
                         TradeApi.Position(
-                            account_id = pos.account_id,
-                            code = pos.code,
-                            name = pos.name,
+                            account_id   = pos.account_id,
+                            code         = pos.code,
+                            name         = pos.name,
                             current_size = pos.current_size,
-                            enable_size = pos.current_size,
-                            side = pos.side,
-                            cost = pos.cost,
-                            cost_price = pos.cost_price,
-                            last_price = 0.0,
-                            holding_pnl = 0.0,
-                            margin = 0.0
+                            enable_size  = pos.current_size,
+                            side         = pos.side,
+                            cost         = pos.cost,
+                            cost_price   = pos.cost_price,
+                            last_price   = 0.0,
+                            holding_pnl  = 0.0,
+                            margin       = 0.0
                         )
             }
 
             his_data += cur_data
             cur_data = data
 
-            println(s"-- new trading day $next_trading_day")
+            //println(s"-- new trading day $next_trading_day")
             //println(s"enable_balance: ${data.balance.init_balance}")
 //            data.positions.foreach( println _)
         }
@@ -203,17 +178,18 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
         cur_data.cur_entrust_no += 1
         val entrust_no = s"SIM-${cur_data.cur_entrust_no}"
 
-        val (date, time) = sim.getSimTime()
+        val (date, time) = sim.getSimTime
 
         if (matched) {
             cur_data.orders += TradeApi.Order(
-                account_id      = account_id,
-                code            = code,
-                name            = code,
-                entrust_no      = entrust_no,
+                account_id     = account_id,
+                code           = code,
+                name           = code,
+                entrust_no     = entrust_no,
                 entrust_action = action,
                 entrust_price  = price,
                 entrust_size   = size,
+                entrust_date   = date,
                 entrust_time   = time,
                 fill_price     = price,
                 fill_size      = size,
@@ -241,6 +217,7 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
                 entrust_action  = action,
                 entrust_price   = price,
                 entrust_size    = size,
+                entrust_date    = date,
                 entrust_time    = time,
                 fill_price      = price,
                 fill_size       = size,
@@ -251,9 +228,9 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
         entrust_no
     }
 
-    def placeOrder(code : String, price : Double, size : Int, action : String) : (String, String) = {
+    def placeOrder(code : String, price : Double, size : Int, action : String) : (OrderID, String) = {
 
-        val (date, time) = this.sim.getSimTime()
+        val (date, time) = this.sim.getSimTime
         if (time < 93000000 || (time>113000000 && time < 1300000) || time > 150000000) {
             println("ERROR: place order when market is closed!")
             return (null, "market is closed")
@@ -268,10 +245,10 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
         val entrust_no = insertOrder(success, code, price, size, action)
 
 
-        println(s"place order: $date $time $code $price $size $action, result($entrust_no, $msg)")
+        println(f"place order: $date $time $code $price%.3f $size $action, ($entrust_no, $msg)")
 
         if (success)
-            (entrust_no, "")
+            (OrderID(entrust_no, 0), "")
         else
             (null, msg)
     }
@@ -284,26 +261,28 @@ class ExchangeAccount(sim: ExchangeSimulator, account_id : String) {
     }
 }
 
-class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
+class SimTradeApi(runner: Runner) extends TradeApi {
 
-    val accounts : Map[String, ExchangeAccount] =
-        runner.accounts.map { case x=> x -> new ExchangeAccount(this, x) }.toMap
+    val accounts : Map[String, SimAccount] =
+        runner.cfg.accounts.map {  x=> x -> new SimAccount(this, x) }.toMap
 
     def init(balance: Double): Unit = {
         accounts.foreach( _._2.init(balance))
     }
 
-    def getSimTime(): (Int, Int) = runner.getSimTimeAsInt()
+    def getSimTime: (Int, Int) = runner.curSimContext.getTimeAsInt
 
-    def moveOn(next_tradingday: LocalDate) = {
-        accounts.foreach(_._2.moveOn(next_tradingday))
+    def moveTo(next_tradingday: LocalDate) = {
+        accounts.foreach(_._2.moveTo(next_tradingday))
     }
 
+    override
     def queryAccountStatus() : (Seq[TradeApi.AccountInfo], String) = {
         val status = accounts.map{ case (k, v) => TradeApi.AccountInfo(k, "sim", k, "Connected", "") }
         (status.toSeq, "")
     }
 
+    override
     def queryBalance(account_id : String) : (TradeApi.Balance, String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
@@ -311,6 +290,8 @@ class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
         else
             (null, "unkown account")
     }
+
+    override
     def queryOrders(account_id : String) : (Seq[TradeApi.Order], String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
@@ -318,6 +299,8 @@ class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
         else
             (null, "unkown account")
     }
+
+    override
     def queryTrades(account_id : String) : (Seq[TradeApi.Trade], String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
@@ -325,6 +308,8 @@ class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
         else
             (null, "unkown account")
     }
+
+    override
     def queryPosition(account_id : String) : (Seq[TradeApi.Position], String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
@@ -332,14 +317,18 @@ class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
         else
             (null, "unkown account")
     }
-    def placeOrder(account_id : String, code : String, price : Double, size : Int, action : String) : (String, String) = {
+
+    override
+    def placeOrder(account_id : String, code : String, price : Double, size : Int, action : String, order_id: Int) : (OrderID, String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
             act.placeOrder(code, price, size, action)
         else
             (null, "unkown account")
     }
-    def cancelOrder(account_id : String, code : String, entrust_no : String) : (Boolean, String) = {
+
+    override
+    def cancelOrder(account_id : String, code : String, entrust_no : String, order_id : Int) : (Boolean, String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
             act.cancelOrder(code, entrust_no)
@@ -347,30 +336,44 @@ class ExchangeSimulator(runner: BackTestRunner) extends TradeApi {
             (false, "unkown account")
     }
 
+
+    override def setCallback(callback: Callback): Unit = {
+
+    }
+
+    override def query(account_id: String, command: String, params: String): (String, String) = {
+        (null, "-1,don't support")
+    }
+
     def saveOrder(path: String): Unit = {
-        val orders = mutable.ArrayBuffer[OrderSaveData]()
-        for ( (id, act) <- accounts ) {
-
-            for ( data <- act.his_data) {
-                val trading_day = data.trading_day.toHumanDate
-
-                orders ++= data.orders.map( ord =>
-                                OrderSaveData(
-                                        ID              = id,
-                                        DATE            = trading_day,
-                                        CODE            = ord.code ,
-                                        ENTRUST_ACTION  = ord.entrust_action ,
-                                        ENTRUST_DATE    = trading_day ,
-                                        ENTRUST_TIME    = ord.entrust_time ,
-                                        ENTRUST_PRICE   = ord.entrust_price ,
-                                        ENTRUST_SIZE    = ord.entrust_size ,
-                                        FILL_SIZE       = ord.fill_size ,
-                                        FILL_PRICE      = ord.fill_price ,
-                                        ENTRUST_NO      = ord.entrust_no ,
-                                        STATUS          = ord.status ,
-                                        STATUS_MSG      = "" )
-                        )
-            }
+//        val orders = mutable.ArrayBuffer[OrderSaveData]()
+//        for ( (id, act) <- accounts ) {
+//
+//            for ( data <- act.his_data) {
+//                val trading_day = data.trading_day.toHumanDate
+//
+//                orders ++= data.orders.map( ord =>
+//                                OrderSaveData(
+//                                        ID              = ord.account_id,
+//                                        DATE            = trading_day,
+//                                        CODE            = ord.code ,
+//                                        ENTRUST_ACTION  = ord.entrust_action ,
+//                                        ENTRUST_DATE    = trading_day ,
+//                                        ENTRUST_TIME    = ord.entrust_time ,
+//                                        ENTRUST_PRICE   = ord.entrust_price ,
+//                                        ENTRUST_SIZE    = ord.entrust_size ,
+//                                        FILL_SIZE       = ord.fill_size ,
+//                                        FILL_PRICE      = ord.fill_price ,
+//                                        ENTRUST_NO      = ord.entrust_no ,
+//                                        STATUS          = ord.status ,
+//                                        STATUS_MSG      = "" )
+//                        )
+//            }
+//        }
+        val orders = mutable.ArrayBuffer[TradeApi.Order]()
+        for ( (_, a) <- accounts) {
+            for ( data <- a.his_data)
+                orders ++= data.orders
         }
 
         val text = CsvHelper.serialize(orders)

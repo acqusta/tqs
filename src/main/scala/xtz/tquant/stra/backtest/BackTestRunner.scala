@@ -4,14 +4,14 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 
 import scala.io.Source
-import xtz.tquant.api.scala.{DataApi, JsonHelper, TradeApi}
-import xtz.tquant.stra.stralet.impl.StraletConfigImpl
+import xtz.tquant.api.scala.{DataApi, TradeApi}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
+import xtz.tquant.stra.utils.JsonHelper
 import xtz.tquant.stra.utils.TimeUtils._
 
 object BackTest {
 
-    def ymdToDate(ymd: Int) : LocalDate = LocalDate.of( ymd / 10000, (ymd%10000)/100, (ymd%100))
+    //def humanDateToDate(ymd: Int) : LocalDate = LocalDate.of( ymd / 10000, (ymd%10000)/100, (ymd%100))
 
     case class StraletInstanceConfig(
         id : String,
@@ -39,16 +39,16 @@ object BackTest {
             val clazz = Class.forName(config.stralet.stralet_class).asInstanceOf[Class[Stralet]]
 
             val date_range = config.backtest.date_range
-            val first_date = if (date_range(0) != 0 ) ymdToDate(date_range(0)) else LocalDate.now()
-            val last_date   = if (date_range(1) != 0 ) ymdToDate(date_range(1)) else LocalDate.now()
+            val first_date = if (date_range(0) != 0 ) date_range(0).toLocalDate else LocalDate.now()
+            val last_date  = if (date_range(1) != 0 ) date_range(1).toLocalDate else LocalDate.now()
 
             val runner = new BackTestRunner(config.stralet.id, clazz, config.stralet.universe,
                 config.backtest.accounts, config.stralet.parameters, first_date, last_date)
             runner.init()
 
-            return runner
+            runner
         }catch{
-            case t: Throwable => t.printStackTrace(); return null
+            case t: Throwable => t.printStackTrace(); null
         }
     }
 }
@@ -74,17 +74,16 @@ case class BackTestRunner (
         exch_sim.init(1000000.0) // Set init_balance
     }
 
+    private val _df = DateTimeFormatter.ofPattern("yyyyMMdd HHmmssSSS")
 
-    val df = DateTimeFormatter.ofPattern("yyyyMMdd HHmmssSSS")
+    def getSimTimeAsInt: (Int, Int) = {
 
-    def getSimTimeAsInt(): (Int, Int) = {
-
-        val str = sim_time.format(df)
+        val str = sim_time.format(_df)
         val ss = str.split(" ")
         (Integer.parseInt(ss(0)), Integer.parseInt(ss(1)))
     }
 
-    def getSimTime() : LocalDateTime = sim_time
+    def getSimTime : LocalDateTime = sim_time
 
     def run(): Unit = {
 
@@ -97,14 +96,14 @@ case class BackTestRunner (
             day = day.plusDays(1)
         }
 
-        val order_file = s"SimOrder-$servlet_id-${first_date.toHumanDay}-${last_date.toHumanDay}-${System.currentTimeMillis}.csv"
+        val order_file = s"SimOrder-$servlet_id-${first_date.toHumanDate}-${last_date.toHumanDate}-${System.currentTimeMillis}.csv"
         exch_sim.saveOrder(order_file)
 
     }
 
     def runOneDay(day : LocalDate): Unit = {
 
-        trading_day = day.toHumanDay
+        trading_day = day.toHumanDate
 
         val begin_time = LocalDateTime.of(day, LocalTime.of(9, 30,0))
         val end_time   = LocalDateTime.of(day, LocalTime.of(15,0,0))
@@ -121,43 +120,57 @@ case class BackTestRunner (
         val stralet = constructor.newInstance()
 
 
-        val context = new BackTestContext(this, data_sim, exch_sim)
-        val config = new StraletConfigImpl()
-        config._context = context
-        config._parameters = parameters
-        config._universe = universe
+        val sc = new BackTestContext(this, data_sim, exch_sim)
+//        val config = new StraletConfigImpl()
+//        config._context = context
+//        config._parameters = parameters
+//        config._universe = universe
 
-        stralet.onInit(config)
+        stralet.onInit(sc)
 
         var bar_time = begin_time
         var timer_time = end_time
 
-        var cycle_time =
-            if (config.cycleInterval > 0) begin_time else end_time.plusHours(1)
+//        var cycle_time =
+//            if (config.cycleInterval > 0) begin_time else end_time.plusHours(1)
 
 
         while (sim_time.isBefore(end_time)) {
-            if (!bar_time.isAfter(sim_time)){
-                stralet.onBar( data_sim.bars(context.bar_codes))
-                bar_time = bar_time.plusSeconds(60)
-                if (bar_time.isAfter(time_1130) && bar_time.isBefore(time_1300))
-                    bar_time = time_1300.plusSeconds(60)
-            }
-            if (!cycle_time.isAfter(sim_time)) {
-                stralet.onCycle()
-                cycle_time = cycle_time.plusSeconds(config.cycleInterval)
+            for ( code <- sc.tick_codes) {
+                val quote = data_sim.nextQuote(code)
+                if (quote != null)
+                    stralet.onTick(quote)
             }
 
-            if (!timer_time.isAfter(sim_time)) {
-                context.executeTimer()
-                timer_time = context.nextTimerTime()
+            for ( code <- sc.bar_codes) {
+                val bar = data_sim.nextBar(code, "1m")
+                if (bar!=null) {
+                    stralet.onBar(bar)
+                }
             }
+//            if (!bar_time.isAfter(sim_time)){
+//                for (code <- sc.bar_codes)
+//                    data_sim.bars(sc.bar_codes)
+//
+//                //bar_time = bar_time.plusSeconds(60)
+//                if (bar_time.isAfter(time_1130) && bar_time.isBefore(time_1300))
+//                    bar_time = time_1300.plusSeconds(60)
+//            }
+//            if (!cycle_time.isAfter(sim_time)) {
+//                stralet.onCycle()
+//                cycle_time = cycle_time.plusSeconds(config.cycleInterval)
+//            }
 
-            sim_time =
-                if (bar_time.isBefore(cycle_time))
-                    if (timer_time.isBefore(bar_time)) timer_time else bar_time
-                else
-                    if (timer_time.isBefore(cycle_time)) timer_time else cycle_time
+            //if (!timer_time.isAfter(sim_time)) {
+            sc.executeTimer()
+                timer_time = sc.nextTimerTime()
+            //}
+
+            sim_time = sc.moveToNextSimTime()
+//                if (bar_time.isBefore(cycle_time))
+//                    if (timer_time.isBefore(bar_time)) timer_time else bar_time
+//                else
+//                    if (timer_time.isBefore(cycle_time)) timer_time else cycle_time
 
         }
 
@@ -168,36 +181,29 @@ case class BackTestRunner (
 
 class BackTestContext (runner: BackTestRunner, data_api: DataApi, trade_api: TradeApi) extends StraletContext {
 
+    var tick_codes = runner.universe
+
     var bar_codes = runner.universe
 
-    override def getTimeAsInt() : (Int, Int) = runner.getSimTimeAsInt()
+    override def getTimeAsInt : (Int, Int) = runner.getSimTimeAsInt
 
-    override def getTime() : LocalDateTime = runner.getSimTime()
+    override def getTime : LocalDateTime = runner.getSimTime
 
-    override def setTimer(id: Int, delay: Int, data: Any) = {
-
-    }
-
-    override def killTimer(id: Int) = {
+    override def setTimer(id: Int, delay: Int, data: Any) : Unit = {
 
     }
 
-    override def postMsg(msg: Any) = {
+    override def killTimer(id: Int) : Unit = {
 
     }
 
-    override def getTradeApi() : TradeApi = trade_api
-
-    override def getDataApi() : DataApi = data_api
-
-    override def subscribeQuote( codes: Seq[String]) = {
+    override def postEvent(evt: String, msg: Any) : Unit = {
 
     }
 
-    override def subscribeBar( codes: Seq[String]) = {
-        bar_codes = bar_codes.union(codes).toSeq
-        data_api.subscribe(bar_codes)
-    }
+    override def getTradeApi : TradeApi = trade_api
+
+    override def getDataApi : DataApi = data_api
 
     /**
       * TODO: Save to file
@@ -207,9 +213,19 @@ class BackTestContext (runner: BackTestRunner, data_api: DataApi, trade_api: Tra
         println(data)
     }
 
+    override def getParameters(name: String, def_value: String) : String = {
+        // FIXME:
+        null
+    }
+
     // return 100 days after so no timer will be executed indeed
     def nextTimerTime() : LocalDateTime = { runner.sim_time.plusDays(100) }
 
     def executeTimer() {}
+
+    def moveToNextSimTime () : LocalDateTime = {
+        // FIXME
+        null
+    }
 
 }

@@ -2,25 +2,34 @@ package xtz.tquant.stra.stralet
 
 import java.time.LocalDateTime
 
-import xtz.tquant.api.scala.DataApi._
-import xtz.tquant.api.scala.{DataApi, TradeApi}
+import xtz.tquant.api.scala.DataApi
+import xtz.tquant.api.scala.DataApi.Bar
+import xtz.tquant.api.scala.TradeApi
 
 
 trait Stralet {
 
-    def onInit(cfg: StraletConfig)
+    private var _sc : StraletContext = _
 
-    def onFini()
+    def sc : StraletContext = _sc
 
-    def onQuote(q: MarketQuote)
+    def onInit(sc: StraletContext) : Unit = {
+        this._sc = sc
+    }
 
-    def onBar(bar: Map[String,Seq[Bar]])
+    def onFini() : Unit = {}
 
-    def onTimer(id: Int, data: Any)
+    def onQuote(q: DataApi.MarketQuote) : Unit = {}
 
-    def onMsg(msg: Any)
+    def onBar(bar: Seq[Bar]) : Unit = {}
 
-    def onCycle()
+    def onTimer(id: Int, data: Any) : Unit = {}
+
+    def onEvent(evt: String, data : Any) : Unit = {}
+
+    def onOrderStatus(order: TradeApi.Order) : Unit = {}
+
+    def onOrderTrade (trade : TradeApi.Trade) : Unit = {}
 }
 
 trait StraletContext {
@@ -29,38 +38,21 @@ trait StraletContext {
       *
       * @return (date, time_ms)
       */
-    def getTimeAsInt() : (Int, Int)
+    def getTimeAsInt : (Int, Int)
 
-    def getTime() : LocalDateTime
+    def getTime : LocalDateTime
 
     def setTimer(id: Int, delay: Int, data: Any)
 
     def killTimer(id: Int)
 
-    def postMsg(msg: Any)
+    def postEvent(evt: String, data : Any)
 
     def getTradeApi : TradeApi
 
     def getDataApi : DataApi
 
-    def subscribeQuote( codes: Seq[String])
-
-    def subscribeBar( codes: Seq[String])
-
     def log(data : Any) : Unit
+
+    def getParameters[T: Manifest](name : String, def_value: T) : T
 }
-
-trait StraletConfig {
-
-    def context : StraletContext
-
-    //def getProperty(name: String) : Any
-
-    def parameters : Map[String, Any]
-
-    def universe : Seq[String]
-
-    def cycleInterval : Int
-
-}
-

@@ -21,6 +21,6 @@ object Boot extends App {
 
     Config.load()
 
-    val runner = BackTest.createRunnerFromFile(stralet_conf)
+    val runner = Runner.createFromFile(stralet_conf)
     runner.run()
 }
