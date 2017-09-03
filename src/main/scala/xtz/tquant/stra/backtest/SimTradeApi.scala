@@ -261,16 +261,16 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
     }
 }
 
-class SimTradeApi(runner: Runner) extends TradeApi {
+class SimTradeApi(session: TestSession) extends TradeApi {
 
     val accounts : Map[String, SimAccount] =
-        runner.cfg.accounts.map {  x=> x -> new SimAccount(this, x) }.toMap
+        session.cfg.accounts.map { x=> x -> new SimAccount(this, x) }.toMap
 
     def init(balance: Double): Unit = {
         accounts.foreach( _._2.init(balance))
     }
 
-    def getSimTime: (Int, Int) = runner.curSimContext.getTimeAsInt
+    def getSimTime: (Int, Int) = session.curSimContext.getTimeAsInt
 
     def moveTo(next_tradingday: LocalDate) = {
         accounts.foreach(_._2.moveTo(next_tradingday))

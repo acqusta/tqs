@@ -8,13 +8,13 @@ import xtz.tquant.stra.utils.TimeUtils._
 
 import scala.collection.mutable
 
-class SimDataApi(runner: Runner) extends DataApi {
+class SimDataApi(session: TestSession) extends DataApi {
 
-    val dapi = new TQuantApi(Config.conf.data.tqc_addr).dataApi
+    val _dapi = new TQuantApi(session.server.conf.data.tqc_addr).dataApi
 
     var _calendar : Set[LocalDate] = _
 
-    def calendar = _calendar
+    def calendar : Set[LocalDate] = _calendar
 
     val subed_codes = mutable.HashSet[String]()
 
@@ -30,19 +30,19 @@ class SimDataApi(runner: Runner) extends DataApi {
 
     def loadCalendar()  = {
         // Build calendar using 000001.SH day lines
-        val (bars, msg) = dapi.bar("000001.SH", "1d")
+        val (bars, msg) = _dapi.bar("000001.SH", "1d")
         assert(bars!=null && bars.nonEmpty, msg)
         _calendar = bars.map( _.date.toLocalDate).toSet
     }
 
     def loadBar(code : String, trading_day: Int) : Seq[DataApi.Bar] = {
-        val (bars, msg) = dapi.bar(code, "1m", trading_day=trading_day)
+        val (bars, msg) = _dapi.bar(code, "1m", trading_day=trading_day)
         assert(bars!=null, s"$code bar error:" + msg)
         bars
     }
 
     def loadTick(code : String, trading_day: Int) : Seq[DataApi.MarketQuote] = {
-        val (ticks, msg) = dapi.tick(code, trading_day=trading_day)
+        val (ticks, msg) = _dapi.tick(code, trading_day=trading_day)
         assert(ticks!=null, s"$code ticks error:" + msg)
         ticks
     }
@@ -69,7 +69,7 @@ class SimDataApi(runner: Runner) extends DataApi {
       */
     def bars(codes: Seq[String]) : Map[String, Seq[DataApi.Bar]] = {
 
-        val (date, time) = runner.curSimContext.getTimeAsInt
+        val (date, time) = session.curSimContext.getTimeAsInt
 
         today_bars.map{ case (code, bi) =>
             code -> bi.bars.filter( d => d.date < date || (d.date==date && d.time <= time))
@@ -78,7 +78,7 @@ class SimDataApi(runner: Runner) extends DataApi {
 
     def nextBar(code : String, cycle: String) : Seq[DataApi.Bar] = {
 
-        val (date, time) = runner.curSimContext.getTimeAsInt
+        val (date, time) = session.curSimContext.getTimeAsInt
         val bar_dt = LocalDateTime.of (date.toLocalDate, time.toLocalTime).plusMinutes(-1)
 
         val cur_bar_time = bar_dt.toLocalDate.toHumanDate * 100000000L +
@@ -99,7 +99,7 @@ class SimDataApi(runner: Runner) extends DataApi {
 
     def nextQuote(code : String) : DataApi.MarketQuote = {
 
-        val (date, time) = runner.curSimContext.getTimeAsInt
+        val (date, time) = session.curSimContext.getTimeAsInt
         val cur_quote_time = date * 100000000L + time * 1000000000L
 
         val ti = today_ticks.getOrElse(code, null)
@@ -156,12 +156,12 @@ class SimDataApi(runner: Runner) extends DataApi {
         if (cycle != "1m")
             return (null, "unsupported cycle " + cycle)
 
-        val (date, time) = runner.curSimContext.getTimeAsInt
-        if (trading_day > runner.curSimContext.getTradingDay ) return (null, "future trading_day")
+        val (date, time) = session.curSimContext.getTimeAsInt
+        if (trading_day > session.curSimContext.getTradingDay ) return (null, "future trading_day")
 
         val bars = loadBar(code, if (trading_day == 0) date else trading_day)
 
-        if (trading_day != 0 && trading_day < runner.curSimContext.getTradingDay)
+        if (trading_day != 0 && trading_day < session.curSimContext.getTradingDay)
             (bars, "")
         else
             (bars.filter( _.time <= time), null)
@@ -180,7 +180,7 @@ class SimDataApi(runner: Runner) extends DataApi {
             val bi = today_bars.getOrElse(code, null)
             if (bi == null) return (null, "no bar data")
 
-            val (date, time) = runner.curSimContext.getTimeAsInt
+            val (date, time) = session.curSimContext.getTimeAsInt
             val future_bar = bi.bars.filter(_.time >= time)
             if (future_bar.isEmpty ) return (null, "market closed")
 
@@ -190,7 +190,7 @@ class SimDataApi(runner: Runner) extends DataApi {
             else
                 last = future_bar.head.open
 
-            val q = DataApi.MarketQuote(code, date, time, runner.curSimContext.getTradingDay,
+            val q = DataApi.MarketQuote(code, date, time, session.curSimContext.getTradingDay,
                 0.0, 0.0, 0.0, 0.0, // fixme, OHLC
                 last,
                 0.0, 0.0,
@@ -221,13 +221,13 @@ class SimDataApi(runner: Runner) extends DataApi {
 
         subed_codes ++= codes.toSet
 
-        dapi.subscribe(codes)
+        _dapi.subscribe(codes)
 
         today_bars ++= subed_codes.diff(today_bars.keys.toSet)
-                            .map(code => code -> BarInfo(this.loadBar(code, this.runner.curSimContext.getTradingDay)))
+                            .map(code => code -> BarInfo(this.loadBar(code, this.session.curSimContext.getTradingDay)))
 
         today_ticks ++= subed_codes.diff(today_ticks.keys.toSet)
-                                .map(code => code -> TickInfo(loadTick(code, this.runner.curSimContext.getTradingDay)))
+                                .map(code => code -> TickInfo(loadTick(code, this.session.curSimContext.getTradingDay)))
 
         (subed_codes.toSeq, "")
     }

@@ -19,8 +19,9 @@ object Boot extends App {
 
     val stralet_conf = line.getOptionValue("f")
 
-    Config.load()
+    val runner = new Runner()
+    runner.init("etc/backtest.conf")
 
-    val runner = Runner.createFromFile(stralet_conf)
-    runner.run()
+    val session = runner.createSessionFromFile(stralet_conf)
+    session.run()
 }
