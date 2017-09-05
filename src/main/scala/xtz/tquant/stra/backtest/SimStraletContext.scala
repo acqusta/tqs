@@ -92,10 +92,16 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
             }
         }
 
-        // FIXME:
-        assert(time != null, "time shouldn't be null")
-        sim_time = time
+//        if (time == null) {
+//            // FIXME:
+//            assert(time != null, "time shouldn't be null")
+//        }
 
-        time
+        if (time != null) {
+            sim_time = time
+            time
+        } else {
+            null
+        }
     }
 }

@@ -57,7 +57,8 @@ class TestSession(_server: Runner, _cfg: TestSessionConfig) {
 
     def runOneDay(day : LocalDate): Unit = {
 
-        val begin_time = LocalDateTime.of(day, LocalTime.of( 9, 30,0))
+        //val begin_time = LocalDateTime.of(day, LocalTime.of( 9, 30,0))
+        val begin_time = LocalDateTime.of(day, LocalTime.of( 0, 0,0))
         val end_time   = LocalDateTime.of(day, LocalTime.of(15,  0,0))
         val time_1130  = LocalDateTime.of(day, LocalTime.of(11, 30,0))
         val time_1300  = LocalDateTime.of(day, LocalTime.of(13,  0,0))
@@ -74,10 +75,10 @@ class TestSession(_server: Runner, _cfg: TestSessionConfig) {
 
         stralet.onInit(sc)
 
-        var bar_time = begin_time
+        var bar_time   = begin_time
         var timer_time = end_time
 
-        while (sc.getTime.isBefore(end_time)) {
+        while (sc.moveToNextSimTime() != null && sc.getTime.isBefore(end_time)) {
             for (code <- dapi.subed_codes) {
                 val quote = dapi.nextQuote(code)
                 if (quote != null)
@@ -92,7 +93,6 @@ class TestSession(_server: Runner, _cfg: TestSessionConfig) {
             }
 
             sc.executeTimer(stralet)
-            sc.moveToNextSimTime()
         }
 
         stralet.onFini()

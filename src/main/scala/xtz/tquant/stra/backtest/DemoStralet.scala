@@ -60,9 +60,12 @@ class DemoStralet extends Stralet {
     }
 
     override def onQuote(q: MarketQuote): Unit = {
+        //println("quote", q.code, q.date, q.time, sc.getTimeAsInt)
     }
 
     override def onBar(bars: Seq[Bar]): Unit = {
+
+        //println("bar", bars.last.code, bars.last.date, bars.last.time)
 
         // MA5 > MA60 BUY
         // MA60 < MA5 SELL

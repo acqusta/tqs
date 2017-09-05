@@ -18,8 +18,6 @@ class SimDataApi(session: TestSession) extends DataApi {
 
     val subed_codes = mutable.HashSet[String]()
 
-    var cur_quote_time : Long = 0
-    var cur_bar_time : Long = 0
     var today_bars  = mutable.HashMap[String,  BarInfo]()
     var today_ticks = mutable.HashMap[String, TickInfo]()
 
@@ -47,16 +45,15 @@ class SimDataApi(session: TestSession) extends DataApi {
         ticks
     }
 
-    case class TickInfo ( ticks : Seq[DataApi.MarketQuote], var pos : Int = 0)
+    case class TickInfo ( ticks : Seq[DataApi.MarketQuote], var pos : Int = -1)
 
-    case class BarInfo ( bars : Seq[DataApi.Bar], var pos : Int = 0)
+    case class BarInfo ( bars : Seq[DataApi.Bar], var pos : Int = -1)
 
     def moveTo(day: LocalDate) : Boolean = {
+
         today_bars.clear()
         today_ticks.clear()
 
-        cur_quote_time = 0
-        cur_bar_time = 0
         subed_codes.clear()
 
         true
@@ -76,20 +73,42 @@ class SimDataApi(session: TestSession) extends DataApi {
         }.toMap
     }
 
+    /**
+      *  9:31:10 -> 9:30:00，不是当前时间属于哪个Bar
+      *
+      * @return
+      */
+    def lastBartime(dt : Tuple2[Int, Int]) : Long = {
+
+        val date = dt._1
+        val time = (dt._2 / 100000) * 100000
+        val bar_dt = LocalDateTime.of (date.toLocalDate, time.toLocalTime) //.plusMinutes(-1)
+
+        bar_dt.toLocalDate.toHumanDate * 100000000L +
+            bar_dt.toLocalTime.toHumanMilli
+    }
+
+    def quoteTime(date: Int, time: Int) = {
+        date * 1000000000L + time
+    }
+    /**
+      * 如果当前pos之后的bar在当前bartime之前或者相等，则表示有新的 bar
+      *
+      * @param code
+      * @param cycle
+      * @return
+      */
     def nextBar(code : String, cycle: String) : Seq[DataApi.Bar] = {
 
-        val (date, time) = session.curSimContext.getTimeAsInt
-        val bar_dt = LocalDateTime.of (date.toLocalDate, time.toLocalTime).plusMinutes(-1)
-
-        val cur_bar_time = bar_dt.toLocalDate.toHumanDate * 100000000L +
-                            bar_dt.toLocalTime.toHumanMilli
+        val last_bartime = lastBartime(session.curSimContext.getTimeAsInt)
 
         val bi = today_bars.getOrElse(code, null)
         if (bi==null) return null
+
         if (bi.pos + 1 >= bi.bars.length) return null
 
         val next_bar = bi.bars(bi.pos+1)
-        if (next_bar.date*1000000000 + next_bar.time <= cur_quote_time) {
+        if ( lastBartime(next_bar.date, next_bar.time) <= last_bartime) {
             bi.pos += 1
             bi.bars.splitAt(bi.pos + 1)._1 // include [0..pos]
         } else {
@@ -100,14 +119,14 @@ class SimDataApi(session: TestSession) extends DataApi {
     def nextQuote(code : String) : DataApi.MarketQuote = {
 
         val (date, time) = session.curSimContext.getTimeAsInt
-        val cur_quote_time = date * 100000000L + time * 1000000000L
+        val cur_quote_time = quoteTime(date, time)
 
         val ti = today_ticks.getOrElse(code, null)
         if (ti==null) return null
         if (ti.pos + 1 >= ti.ticks.length) return null
 
         val next_tk = ti.ticks(ti.pos+1)
-        if (next_tk.date*1000000000 + next_tk.time <= cur_quote_time) {
+        if ( quoteTime(next_tk.date, next_tk.time) <= cur_quote_time) {
             ti.pos += 1
             next_tk
         } else {
@@ -124,7 +143,7 @@ class SimDataApi(session: TestSession) extends DataApi {
         for ( (_, ti) <- this.today_ticks) {
             if (ti.pos + 1 < ti.ticks.length) {
                 val tk = ti.ticks(ti.pos + 1)
-                val time = tk.date* 1000000000L + tk.time
+                val time = quoteTime(tk.date, tk.time)
                 if (time < quote_time)
                     quote_time = time
             }
@@ -164,7 +183,7 @@ class SimDataApi(session: TestSession) extends DataApi {
         if (trading_day != 0 && trading_day < session.curSimContext.getTradingDay)
             (bars, "")
         else
-            (bars.filter( _.time <= time), null)
+            (bars.filter( x => x.date < date || (x.date == date &&x.time <= time)), null)
     }
 
     /**
@@ -207,9 +226,11 @@ class SimDataApi(session: TestSession) extends DataApi {
         } else {
             val ti = today_ticks.getOrElse(code, null)
             if (ti == null) return (null, "-1,no tick data")
-            if (ti.pos<0) return (null, "-1,not arrive yet")
-
-            (ti.ticks(ti.pos), "0,")
+            if (ti.pos<0) {
+                return (null, "-1,not arrive yet")
+            } else {
+                (ti.ticks(ti.pos), "0,")
+            }
         }
     }
 
@@ -219,15 +240,35 @@ class SimDataApi(session: TestSession) extends DataApi {
 
     override def subscribe(codes : Seq[String]) : (Seq[String], String) = {
 
+        val (date, time) = session.curSimContext.getTimeAsInt
+        val cur_bar_time   = lastBartime(date, time)
+        val cur_quote_time = quoteTime(date, time)
+
         subed_codes ++= codes.toSet
 
         _dapi.subscribe(codes)
 
         today_bars ++= subed_codes.diff(today_bars.keys.toSet)
-                            .map(code => code -> BarInfo(this.loadBar(code, this.session.curSimContext.getTradingDay)))
+                            .map{ code =>
+                                val bars = this.loadBar(code, this.session.curSimContext.getTradingDay)
+                                var pos = bars.length
+                                for ( i  <- bars.indices if pos == bars.length) {
+                                    if ( lastBartime(bars(i).date, bars(i).time) > cur_bar_time) pos = i
+                                }
+                                pos -= 1
+                                code -> BarInfo(bars, pos)
+                            }
 
         today_ticks ++= subed_codes.diff(today_ticks.keys.toSet)
-                                .map(code => code -> TickInfo(loadTick(code, this.session.curSimContext.getTradingDay)))
+                                .map{ code =>
+                                    val ticks = this.loadTick(code, this.session.curSimContext.getTradingDay)
+                                    var pos = ticks.length
+                                    for ( i  <- ticks.indices if pos == ticks.length) {
+                                        if (ticks(i).date*1000000000L + ticks(i).time > cur_quote_time) pos = i
+                                    }
+                                    pos -= 1
+                                    code -> TickInfo(ticks, pos)
+                                }
 
         (subed_codes.toSeq, "")
     }
