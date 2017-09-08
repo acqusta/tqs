@@ -60,8 +60,11 @@ class DemoStralet extends Stralet {
 //
 //        {
 //            universe.foreach{ x =>
-//                val b = sc.getDataApi.bar(x, cycle)._1.last
-//                sc.log("   ", b.code, b.date, b.time)
+//                val (bars, msg) = sc.getDataApi.bar(x, cycle)
+//                if (bars != null)
+//                    sc.log("   ", bars.last.code, bars.last.date, bars.last.time)
+//                else
+//                    sc.log("   ", x, msg)
 //            }
 //        }
 

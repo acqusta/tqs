@@ -215,22 +215,34 @@ class SimDataApi(st: StraletTest) extends DataApi {
             assert(cycle_ok, s"wrong cycle: data_leve is ${st.cfg.data_level}, cycle is $cycle")
         }
 
-//        if (cycle != "1m")
-//            return (null, "unsupported cycle " + cycle)
-
         val (date, time) = st.curSimContext.getTimeAsInt
         if (trading_day > st.curSimContext.getTradingDay ) return (null, "future trading_day")
 
-        val bars = loadBar(code, cycle, if (trading_day == 0) date else trading_day, price_adj)
-
-        // 只能取得“今日”之前的日线数据
-        if (cycle == "1d") {
-            (bars.filter( x => x.date < date), null)
+        // TODO: cycle == "1d" && data_level == "1d" && price_adj are same
+        if ( (trading_day == 0 || trading_day == st.curSimContext.getTradingDay) &&
+             cycle == "1m" &&
+            (st.cfg.data_level == "1m" || st.cfg.data_level == "tk"))
+        {
+            val bi = today_bars.getOrElse(code, null)
+            if ( bi != null && bi.pos != -1) {
+                val b = bi.bars(bi.pos)
+                assert( b.date < date || (b.date == date && b.time <= time), s"wrong bar time: $code ${b.date} ${b.time}")
+                (bi.bars.splitAt( bi.pos +1)._1, "")
+            } else {
+                (null, s"-1, no bar data: $code $date $time")
+            }
         } else {
-            if (trading_day != 0 && trading_day < st.curSimContext.getTradingDay)
-                (bars, "")
-            else
-                (bars.filter( x => x.date < date || (x.date == date &&x.time <= time)), null)
+            val bars = loadBar(code, cycle, if (trading_day == 0) date else trading_day, price_adj)
+
+            // 只能取得“今日”之前的日线数据
+            if (cycle == "1d") {
+                (bars.filter( x => x.date < date), null)
+            } else {
+                if (trading_day != 0 && trading_day < st.curSimContext.getTradingDay)
+                    (bars, "")
+                else
+                    (bars.filter( x => x.date < date || (x.date == date &&x.time <= time)), null)
+            }
         }
     }
 

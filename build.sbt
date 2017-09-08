@@ -37,10 +37,12 @@ libraryDependencies += "com.typesafe.akka"  %% "akka-testkit"            % akkaV
 
 packAutoSettings
 
-//packMain        := Map("tquant-api" -> "tquant.api.Boot")
-//
-//packJvmOpts     := Map("tquant-api" -> Seq(
-//  "-Djava.library.path=${PROG_HOME}/lib"
-//))
-//
-//packGenerateWindowsBatFile := true
+packMain        := Map("tqs-backtest" -> "xtz.tquant.stra.backtest.Boot")
+
+packJvmOpts     := Map("tquant-api" -> Seq(
+  "-Djava.library.path=${PROG_HOME}/lib"
+))
+
+packResourceDir += (baseDirectory.value / "etc" -> "etc")
+
+packGenerateWindowsBatFile := true
