@@ -1,22 +1,19 @@
 package xtz.tquant.stra.backtest
 
-import com.tictactec.ta.lib.{MAType, MInteger}
+import com.tictactec.ta.lib.MInteger
 import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
 import xtz.tquant.api.scala.TradeApi.{Order, Trade}
 import xtz.tquant.api.scala.{DataApi, TradeApi}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
 
-/**
-  * Created by terryxu on 2017/3/26.
-  */
 class DemoStralet extends Stralet {
 
-    //var cfg : StraletConfig = _
-    //var sc : StraletContext = _
     val talib = new com.tictactec.ta.lib.Core()
     var stk_account = ""
     var trade_api : TradeApi = _
     var data_api  : DataApi = _
+
+    var universe : Seq[String] = _
 
     override def onInit(sc: StraletContext): Unit = {
         super.onInit(sc)
@@ -28,18 +25,12 @@ class DemoStralet extends Stralet {
 
         sc.log("DemoStralet onInit", sc.getTime)
 
-        data_api.subscribe( sc.getParameters[Seq[String]]("universe",Seq[String]()))
+        universe = sc.getParameters[Seq[String]]("universe",Seq[String]())
+        data_api.subscribe( universe )
 
         val (positions, _) = trade_api.queryPosition(this.stk_account)
         val (balance, _) = trade_api.queryBalance(this.stk_account)
 
-//        var value = balance.enable_balance
-//        for (pos <- positions) {
-//            val (q, _) = data_api.quote(pos.code)
-//            sc.log( pos.code, pos.current_size, q.last)
-//            value += q.last * pos.current_size
-//        }
-//        sc.log(s"value: $value")
     }
 
     override def onFini() = {
@@ -47,25 +38,40 @@ class DemoStralet extends Stralet {
 
         val (positions, _) = trade_api.queryPosition(this.stk_account)
         val (balance, _) = trade_api.queryBalance(this.stk_account)
-
-        var value = balance.enable_balance
-
-//        for (pos <- positions) {
-//            val (q, _) = data_api.quote(pos.code)
-//            sc.log( pos.code, pos.current_size, q.last)
-//            value += q.last * pos.current_size
-//        }
-
-//        sc.log(s"value: $value")
     }
 
     override def onQuote(q: MarketQuote): Unit = {
-        //println("quote", q.code, q.date, q.time, sc.getTimeAsInt)
+//        sc.log("quote", q.code, q.date, q.time, sc.getTimeAsInt)
+//
+//        {
+//            universe.foreach{ x =>
+//                val (q, msg) = sc.getDataApi.quote(x)
+//                if (q == null)
+//                    sc.log(s"       quote failed: $x $msg")
+//                else
+//                    sc.log("       ", q.code, q.date, q.time)
+//            }
+//        }
     }
 
-    override def onBar(bars: Seq[Bar]): Unit = {
+    override def onBar(cycle : String, bar : Bar): Unit = {
 
-        //println("bar", bars.last.code, bars.last.date, bars.last.time)
+//        sc.log("bar", bar.code, bar.date, bar.time)
+//
+//        {
+//            universe.foreach{ x =>
+//                val b = sc.getDataApi.bar(x, cycle)._1.last
+//                sc.log("   ", b.code, b.date, b.time)
+//            }
+//        }
+
+        if (cycle != "1m") return
+
+        val (bars, msg) = sc.getDataApi.bar(bar.code, "1m")
+        if (bars == null) {
+            sc.log("dapi.bar failed: " + msg)
+            return
+        }
 
         // MA5 > MA60 BUY
         // MA60 < MA5 SELL
@@ -95,7 +101,8 @@ class DemoStralet extends Stralet {
         if (ma30(ma30_length -1) > ma5(ma5_length-1)) {
             if (ma30(ma30_length - 2) <= ma5(ma5_length - 2)) {
                 // up cross, buy some
-                val (q, _) = data_api.quote(code)
+                val (q, msg) = data_api.quote(code)
+                assert ( q != null, s"quote failed: $code $msg")
                 var cost = q.last * 100
                 if ( cost < enable_balance) {
                     enable_balance -= cost
@@ -114,19 +121,19 @@ class DemoStralet extends Stralet {
         }
     }
 
-//    override def onOrderStatus(order: Order): Unit = {
-//
-//    }
-//
-//    override def onOrderTrade(trade: Trade): Unit = {
-//
-//    }
-//
-//    override def onEvent(evt: String, data: Any): Unit = {
-//    }
-//
-//    override def onTimer(id : Int, data : Any): Unit = {
-////        val (date, time) = sc.getTimeAsInt()
-////        sc.log(s"onCycle $date $time")
-//    }
+    override def onOrderStatus(order: Order): Unit = {
+        sc.log("onOrder: " + order)
+    }
+
+    override def onOrderTrade(trade: Trade): Unit = {
+        sc.log("onTrade: " + trade)
+    }
+
+    override def onEvent(evt: String, data: Any): Unit = {
+    }
+
+    override def onTimer(id : Int, data : Any): Unit = {
+//        val (date, time) = sc.getTimeAsInt()
+//        sc.log(s"onCycle $date $time")
+    }
 }

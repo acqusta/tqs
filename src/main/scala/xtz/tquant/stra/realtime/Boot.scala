@@ -1,4 +1,4 @@
-package xtz.tquant.stra.backtest
+package xtz.tquant.stra.realtime
 
 import org.apache.commons.cli.{DefaultParser, HelpFormatter, Options}
 
@@ -19,9 +19,11 @@ object Boot extends App {
 
     val stralet_conf = line.getOptionValue("f")
 
+    Config.load("etc/realtime.conf")
     val container = new Container()
-    container.init("etc/backtest.conf")
-
-    val session = container.createTestFromFile(stralet_conf)
-    session.run()
+    container.run(stralet_conf)
+//    runner.init("etc/backtest.conf")
+//
+//    val session = runner.createSessionFromFile(stralet_conf)
+//    session.run()
 }

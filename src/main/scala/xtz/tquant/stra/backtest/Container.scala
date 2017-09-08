@@ -2,20 +2,19 @@ package xtz.tquant.stra.backtest
 
 import java.time.LocalDate
 
-import xtz.tquant.stra.backtest.TestConfig.TestConfig
-import xtz.tquant.stra.backtest.Runner.Config
-import xtz.tquant.stra.backtest.TestSession.TestSessionConfig
+import xtz.tquant.stra.backtest.Container.Config
+import xtz.tquant.stra.backtest.StraletTest.StraletTestConfig
 import xtz.tquant.stra.stralet.Stralet
 import xtz.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
 import xtz.tquant.stra.utils.TimeUtils._
 
-object Runner {
+object Container {
 
     case class DataProviderConfig (
         data_home : String,
-        tqc_addr : String
+        tqc_addr  : String
     )
 
     case class Config(
@@ -27,9 +26,9 @@ object Runner {
 /**
   * Created by terryxu on 2017/9/2.
   */
-class Runner {
+class Container {
 
-    private var _conf : Runner.Config = _
+    private var _conf : Container.Config = _
 
     def conf = _conf
 
@@ -40,22 +39,25 @@ class Runner {
 
     }
 
-    def createSessionFromFile(path: String) : TestSession = {
+    def createTestFromFile(path: String) : StraletTest = {
         try {
             var text = Source.fromFile(path).mkString
 
-            val config = JsonHelper.deserialize[TestConfig](text)
+            val config = JsonHelper.deserialize[StraletTest.TestConfig](text)
 
             val clazz = Class.forName(config.stralet.stralet_class).asInstanceOf[Class[Stralet]]
 
             val date_range = config.backtest.date_range
             val first_date = if (date_range(0) != 0 ) date_range(0).toLocalDate else LocalDate.now()
             val last_date  = if (date_range(1) != 0 ) date_range(1).toLocalDate else LocalDate.now()
+            val data_level = if (config.backtest.data_level != null) config.backtest.data_level else "tk"
 
-            val cfg = TestSessionConfig(config.stralet.id, clazz,
-                config.backtest.accounts, config.stralet.parameters, first_date, last_date)
+            val cfg = StraletTestConfig(config.stralet.id, clazz,
+                                        config.backtest.accounts, config.stralet.parameters,
+                                        first_date, last_date,
+                                        data_level = data_level )
 
-            val session = new TestSession(this, cfg)
+            val session = new StraletTest(this, cfg)
             session.init()
             session
         }catch{

@@ -5,10 +5,11 @@ import java.time.format.DateTimeFormatter
 
 import xtz.tquant.api.scala.{DataApi, TradeApi}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
+import xtz.tquant.stra.utils.TimeUtils._
 
 import scala.collection.mutable
 
-class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: LocalDateTime) extends StraletContext {
+class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: LocalDateTime) extends StraletContext {
 
     private val _df = DateTimeFormatter.ofPattern("yyyyMMdd HHmmssSSS")
 
@@ -17,6 +18,7 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
     private val timer_map = mutable.HashMap[Int, Timer]()
 
     private val evt_list = mutable.ArrayBuffer[(String, Any)]()
+
 
     def getTradingDay : Int = trading_day
 
@@ -29,6 +31,9 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
     override def getTime : LocalDateTime = sim_time
 
     override def setTimer(id: Int, delay: Int, data: Any) : Unit = {
+        assert( st.cfg.data_level != "1d")
+        assert( st.cfg.data_level != "1m")
+
         timer_map += id -> Timer(id, delay, data, getTime.plusNanos(delay*1000000))
     }
 
@@ -37,14 +42,18 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
     }
 
     override def postEvent(evt: String, msg: Any) : Unit = {
+
+        assert( st.cfg.data_level != "1d")
+        assert( st.cfg.data_level != "1m")
+
         evt_list.synchronized{
             evt_list.append((evt, msg))
         }
     }
 
-    override def getTradeApi : TradeApi = session.tapi
+    override def getTradeApi : TradeApi = st.tapi
 
-    override def getDataApi : DataApi = session.dapi
+    override def getDataApi : DataApi = st.dapi
 
     /**
       * TODO: Save to file
@@ -57,7 +66,7 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
     override def getParameters[T: Manifest](name : String, def_value: T) : T = {
 
         // FIXME:
-        session.cfg.parameters.getOrElse(name, def_value).asInstanceOf[T]
+        st.cfg.parameters.getOrElse(name, def_value).asInstanceOf[T]
     }
 
     def calcNextTimerTime() : LocalDateTime = {
@@ -82,8 +91,10 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
     }
 
     def moveToNextSimTime () : LocalDateTime = {
+
+        assert (st.cfg.data_level != "1d");
         val time = {
-            val time1 = session.dapi.calcNextQuoteTime()
+            val time1 = st.dapi.calcNextTime()
             val time2 = calcNextTimerTime()
             if (time1 != null && time2 !=null) {
                 if (time1.isBefore(time2)) time1 else time2
@@ -92,16 +103,16 @@ class SimStraletContext(session: TestSession, trading_day: Int, var sim_time: Lo
             }
         }
 
-//        if (time == null) {
-//            // FIXME:
-//            assert(time != null, "time shouldn't be null")
-//        }
-
         if (time != null) {
             sim_time = time
             time
         } else {
             null
         }
+    }
+
+    def moveToNextTradingDay(date : Int, sim_time : LocalDateTime) = {
+        this.trading_day = date
+        this.sim_time = sim_time
     }
 }

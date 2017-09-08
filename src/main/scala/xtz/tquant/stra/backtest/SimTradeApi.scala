@@ -261,7 +261,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
     }
 }
 
-class SimTradeApi(session: TestSession) extends TradeApi {
+class SimTradeApi(session: StraletTest) extends TradeApi {
 
     val accounts : Map[String, SimAccount] =
         session.cfg.accounts.map { x=> x -> new SimAccount(this, x) }.toMap
@@ -278,7 +278,7 @@ class SimTradeApi(session: TestSession) extends TradeApi {
 
     override
     def queryAccountStatus() : (Seq[TradeApi.AccountInfo], String) = {
-        val status = accounts.map{ case (k, v) => TradeApi.AccountInfo(k, "sim", k, "Connected", "") }
+        val status = accounts.map{ case (k, v) => TradeApi.AccountInfo(k, "sim", k, "Connected", "", "sim") }
         (status.toSeq, "")
     }
 

@@ -21,7 +21,7 @@ trait Stralet {
 
     def onQuote(q: DataApi.MarketQuote) : Unit = {}
 
-    def onBar(bar: Seq[Bar]) : Unit = {}
+    def onBar(cycle : String, bar: Bar) : Unit = {}
 
     def onTimer(id: Int, data: Any) : Unit = {}
 
