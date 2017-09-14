@@ -245,7 +245,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
         val entrust_no = insertOrder(success, code, price, size, action)
 
 
-        println(f"place order: $date $time $code $price%.3f $size $action, ($entrust_no, $msg)")
+        this.sim.log(f"place order: $date $time $code $price%.3f $size $action, ($entrust_no, $msg)")
 
         if (success)
             (OrderID(entrust_no, 0), "")
@@ -261,16 +261,18 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
     }
 }
 
-class SimTradeApi(session: StraletTest) extends TradeApi {
+class SimTradeApi(st: StraletTest) extends TradeApi {
+
+    def log(data: Any) : Unit = st.curSimContext.log(data)
 
     val accounts : Map[String, SimAccount] =
-        session.cfg.accounts.map { x=> x -> new SimAccount(this, x) }.toMap
+        st.cfg.accounts.map { x=> x -> new SimAccount(this, x) }.toMap
 
     def init(balance: Double): Unit = {
         accounts.foreach( _._2.init(balance))
     }
 
-    def getSimTime: (Int, Int) = session.curSimContext.getTimeAsInt
+    def getSimTime: (Int, Int) = st.curSimContext.getTimeAsInt
 
     def moveTo(next_tradingday: LocalDate) = {
         accounts.foreach(_._2.moveTo(next_tradingday))

@@ -227,7 +227,7 @@ class SimDataApi(st: StraletTest) extends DataApi {
             if ( bi != null && bi.pos != -1) {
                 val b = bi.bars(bi.pos)
                 assert( b.date < date || (b.date == date && b.time <= time), s"wrong bar time: $code ${b.date} ${b.time}")
-                (bi.bars.splitAt( bi.pos +1)._1, "")
+                (bi.bars.splitAt( bi.pos + 1)._1, "")
             } else {
                 (null, s"-1, no bar data: $code $date $time")
             }

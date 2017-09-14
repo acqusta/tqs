@@ -64,11 +64,15 @@ class StraletTest(_container: Container, _cfg: StraletTestConfig) {
 
     def run(): Unit = {
 
+        println( LocalDateTime.now())
+
         cfg.data_level match {
             case "tk" => runTkOr1m()
             case "1m" => runTkOr1m()
             case "1d" => run1d()
         }
+
+        println( LocalDateTime.now())
 
         val df = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmssSSS")
         val time_lable = LocalDateTime.now().format(df)

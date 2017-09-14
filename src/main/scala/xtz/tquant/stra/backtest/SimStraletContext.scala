@@ -55,12 +55,14 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
 
     override def getDataApi : DataApi = st.dapi
 
+
+    private val _log_df = DateTimeFormatter.ofPattern("yyyyMMdd HHmmss.SSS")
     /**
       * TODO: Save to file
       * @param data
       */
     override def log(data: Any) :Unit = {
-        println(data)
+        println(LocalDateTime.now.format(_log_df) + " " + data)
     }
 
     override def getParameters[T: Manifest](name : String, def_value: T) : T = {
@@ -92,7 +94,7 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
 
     def moveToNextSimTime () : LocalDateTime = {
 
-        assert (st.cfg.data_level != "1d");
+        assert (st.cfg.data_level != "1d")
         val time = {
             val time1 = st.dapi.calcNextTime()
             val time2 = calcNextTimerTime()
