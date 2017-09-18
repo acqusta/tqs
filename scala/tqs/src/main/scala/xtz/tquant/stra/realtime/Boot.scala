@@ -1,4 +1,4 @@
-package xtz.tquant.stra.backtest
+package xtz.tquant.stra.realtime
 
 import org.apache.commons.cli.{DefaultParser, HelpFormatter, Options}
 
@@ -12,16 +12,12 @@ object Boot extends App {
     val line = parser.parse(option, args)
 
     if (!line.hasOption("f")) {
-        new HelpFormatter().printHelp("backtest -f etc/demostralet.conf: ", option)
+        new HelpFormatter().printHelp("backtest -f stralet.conf: ", option)
         System.exit(-1)
     }
 
 
     val stralet_conf = line.getOptionValue("f")
 
-    val container = new Container()
-    container.init("etc/backtest.conf")
-
-    val session = container.createTestFromFile(stralet_conf)
-    session.run()
+    Run.run(stralet_conf, "etc/realtime.conf")
 }
