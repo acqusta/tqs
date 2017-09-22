@@ -15,21 +15,21 @@ object Config {
         sim_order_status : Boolean
     )
 
-    case class AllConfig (
+    case class RTConfig(
         tqc      : TqcConfig,
         options  : Options
     )
 
-    private var _config: AllConfig = null
+//    private var _config: AllConfig = null
 
-    def conf = _config
-
-    def load(path: String): AllConfig = {
-
-        var text = Source.fromFile(path).mkString
-
-        _config = JsonHelper.deserialize[AllConfig](text)
-        _config
-    }
+//    def conf = _config
+//
+//    def load(path: String): AllConfig = {
+//
+//        var text = Source.fromFile(path).mkString
+//
+//        _config = JsonHelper.deserialize[AllConfig](text)
+//        _config
+//    }
 
 }

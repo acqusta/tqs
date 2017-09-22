@@ -1,6 +1,6 @@
 package xtz.tquant.stra.backtest
 
-import java.time.LocalDateTime
+import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
 
 import xtz.tquant.api.scala.{DataApi, TradeApi}
@@ -20,7 +20,7 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
     private val evt_list = mutable.ArrayBuffer[(String, Any)]()
 
 
-    def getTradingDay : Int = trading_day
+    override def getTradingDay : Int = trading_day
 
     override def getTimeAsInt : (Int, Int) = {
         val str = sim_time.format(_df)
@@ -70,6 +70,8 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
         // FIXME:
         st.cfg.parameters.getOrElse(name, def_value).asInstanceOf[T]
     }
+
+    override def mode : String = "backtest"
 
     def calcNextTimerTime() : LocalDateTime = {
         if (timer_map.nonEmpty)

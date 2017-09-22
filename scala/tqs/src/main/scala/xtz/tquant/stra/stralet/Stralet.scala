@@ -1,6 +1,6 @@
 package xtz.tquant.stra.stralet
 
-import java.time.LocalDateTime
+import java.time.{LocalDate, LocalDateTime}
 
 import xtz.tquant.api.scala.DataApi
 import xtz.tquant.api.scala.DataApi.Bar
@@ -38,9 +38,10 @@ trait StraletContext {
       *
       * @return (date, time_ms)
       */
-    def getTimeAsInt : (Int, Int)
+    def getTimeAsInt  : (Int, Int)
+    def getTime       : LocalDateTime
 
-    def getTime : LocalDateTime
+    def getTradingDay : Int
 
     def setTimer(id: Int, delay: Int, data: Any)
 
@@ -55,4 +56,6 @@ trait StraletContext {
     def log(data : Any) : Unit
 
     def getParameters[T: Manifest](name : String, def_value: T) : T
+
+    def mode : String
 }

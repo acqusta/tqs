@@ -32,14 +32,14 @@ libraryDependencies += "com.typesafe.akka"  %% "akka-actor"              % akkaV
 libraryDependencies += "com.typesafe.akka"  %% "akka-slf4j"              % akkaVersion
 libraryDependencies += "com.typesafe.akka"  %% "akka-testkit"            % akkaVersion
 
-//packAutoSettings
+packAutoSettings
 
-//packMain        := Map("tqs-backtest" -> "xtz.tquant.stra.backtest.Boot")
+packMain        := Map("rbreaker" -> "cta.RBreakerStralet")
 
 //packJvmOpts     := Map("tqs-backtest" -> Seq(
 //  "-Djava.library.path=${PROG_HOME}/lib"
 //))
 
-//packResourceDir += (baseDirectory.value / "etc" -> "etc")
+packResourceDir += (baseDirectory.value / "etc" -> "etc")
 
-//packGenerateWindowsBatFile := true
+packGenerateWindowsBatFile := true

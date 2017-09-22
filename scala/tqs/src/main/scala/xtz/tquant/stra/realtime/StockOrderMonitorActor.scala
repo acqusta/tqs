@@ -5,6 +5,7 @@ import java.time.{DayOfWeek, LocalDateTime}
 import akka.actor.{Actor, ActorRef}
 import xtz.tquant.api.scala.{TQuantApi, TradeApi}
 import xtz.tquant.stra.utils.TimeUtils._
+import xtz.tquant.stra.realtime.Config.RTConfig
 
 import scala.concurrent.duration.{DurationInt, _}
 import scala.collection.mutable
@@ -13,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object StockOrderMonitorActor {
 
     case class RegisterStraletActor(actor: ActorRef)
-    case class Init ()
+    case class InitReq(rt_conf : RTConfig)
 
 }
 /**
@@ -25,21 +26,7 @@ class StockOrderMonitorActor extends Actor{
 
     val logger = org.slf4j.LoggerFactory.getLogger(this.getClass.getSimpleName)
 
-    var tapi = new TQuantApi(Config.conf.tqc.addr).tradeApi
-
-    tapi.setCallback(new TradeApi.Callback {
-        override def onOrderTrade(trade: TradeApi.Trade): Unit = {
-            self ! trade
-        }
-
-        override def onOrderStatus(order: TradeApi.Order): Unit = {
-            self ! order
-        }
-
-        override def onAccountStatus(account: TradeApi.AccountInfo): Unit = {
-            self ! account
-        }
-    })
+    var tapi : TradeApi = _
 
     val actors = mutable.ArrayBuffer[ActorRef]()
 
@@ -59,7 +46,7 @@ class StockOrderMonitorActor extends Actor{
 
     override def receive = {
 
-        case Init()                         => onInit()
+        case req: InitReq                      => onInit(req)
         case RegisterStraletActor(actor)    => actors += actor
         case trade  : TradeApi.Trade        => onTrade(trade)
         case order  : TradeApi.Order        => onOrderStatus(order)
@@ -68,8 +55,24 @@ class StockOrderMonitorActor extends Actor{
         case "CHECK_TRADE_TIMER"            => onCheckTradeTimer()
     }
 
-    def onInit() = {
+    def onInit(req : InitReq) = {
         logger.info("Start StockOrderMonitor")
+
+        tapi = new TQuantApi(req.rt_conf.tqc.addr).tradeApi
+
+        tapi.setCallback(new TradeApi.Callback {
+            override def onOrderTrade(trade: TradeApi.Trade): Unit = {
+                self ! trade
+            }
+
+            override def onOrderStatus(order: TradeApi.Order): Unit = {
+                self ! order
+            }
+
+            override def onAccountStatus(account: TradeApi.AccountInfo): Unit = {
+                self ! account
+            }
+        })
         this.context.system.scheduler.scheduleOnce(1 seconds, self, "CHECK_ORDER_TIMER")
     }
 
@@ -185,7 +188,7 @@ class StockOrderMonitorActor extends Actor{
             notifyOrderStatus (ord.order)
     }
 
-    def isWorkingTime(): Boolean = {
+    def isWorkingTime: Boolean = {
 
         val now = LocalDateTime.now()
 
@@ -202,7 +205,7 @@ class StockOrderMonitorActor extends Actor{
     }
 
     def onCheckOrderTimer() = {
-        if (isWorkingTime()) {
+        if (isWorkingTime) {
             try {
                 updateAccountStatus()
                 for ( act <- accounts if act._2.connected) updateOrder(act._2)
@@ -215,7 +218,7 @@ class StockOrderMonitorActor extends Actor{
     }
 
     def onCheckTradeTimer() = {
-        if (isWorkingTime()) {
+        if (isWorkingTime) {
             try {
                 for (act <- accounts if act._2.connected) updateTrade(act._2)
             } catch {

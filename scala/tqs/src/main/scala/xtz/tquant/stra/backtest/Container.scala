@@ -2,66 +2,67 @@ package xtz.tquant.stra.backtest
 
 import java.time.LocalDate
 
-import xtz.tquant.stra.backtest.Container.Config
-import xtz.tquant.stra.backtest.StraletTest.StraletTestConfig
+import xtz.tquant.stra.backtest.StraletTest._StraletTestConfig
 import xtz.tquant.stra.stralet.Stralet
 import xtz.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
 import xtz.tquant.stra.utils.TimeUtils._
 
-object Container {
-
-    case class DataProviderConfig (
-        data_home : String,
-        tqc_addr  : String
-    )
-
-    case class Config(
-        data : DataProviderConfig
-    )
-
-}
 
 /**
   * Created by terryxu on 2017/9/2.
   */
 class Container {
 
-    private var _conf : Container.Config = _
+    private var _bt_conf : StraletTest.BackTestConfig = _
 
-    def conf = _conf
+    def conf = _bt_conf
 
     def init(conf_path: String): Unit = {
 
         val text = Source.fromFile( conf_path).mkString
-        _conf = JsonHelper.deserialize[Config](text)
+        _bt_conf = JsonHelper.deserialize[StraletTest.BackTestConfig](text)
 
     }
 
-    def createTestFromFile(path: String) : StraletTest = {
+    def init(conf : StraletTest.BackTestConfig): Unit = {
+        _bt_conf = conf
+    }
+
+//    def createTestFromFile(path: String) : StraletTest = {
+//        try {
+//            var text = Source.fromFile(path).mkString
+//
+//            val config = JsonHelper.deserialize[StraletTest.](text)
+//
+//            createTest(config)
+//
+//        }catch{
+//            case t: Throwable => t.printStackTrace(); null
+//        }
+//    }
+
+    def createTest(stralet_conf : StraletTest.StraletConfig) : StraletTest = {
         try {
-            var text = Source.fromFile(path).mkString
+            val clazz = Class.forName(stralet_conf.stralet.stralet_class).asInstanceOf[Class[Stralet]]
 
-            val config = JsonHelper.deserialize[StraletTest.TestConfig](text)
-
-            val clazz = Class.forName(config.stralet.stralet_class).asInstanceOf[Class[Stralet]]
-
-            val date_range = config.backtest.date_range
+            val date_range = _bt_conf.backtest.date_range
             val first_date = if (date_range(0) != 0 ) date_range(0).toLocalDate else LocalDate.now()
             val last_date  = if (date_range(1) != 0 ) date_range(1).toLocalDate else LocalDate.now()
-            val data_level = if (config.backtest.data_level != null) config.backtest.data_level else "tk"
+            val data_level = if (_bt_conf.backtest.data_level != null) _bt_conf.backtest.data_level else "tk"
 
-            val cfg = StraletTestConfig(config.stralet.id, clazz,
-                                        config.backtest.accounts, config.stralet.parameters,
+            val cfg = _StraletTestConfig(stralet_conf.stralet.id, clazz,
+                                        _bt_conf.backtest.accounts, stralet_conf.stralet.parameters,
                                         first_date, last_date,
                                         data_level = data_level )
 
-            val session = new StraletTest(this, cfg)
-            session.init()
-            session
+            val test = new StraletTest(this, cfg)
+            test.init()
+            test
         }catch{
             case t: Throwable => t.printStackTrace(); null
         }
     }
+
 }

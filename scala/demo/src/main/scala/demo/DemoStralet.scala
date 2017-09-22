@@ -149,8 +149,8 @@ object DemoStralet extends App {
     }
 
     args(0) match {
-        case "backtest" => xtz.tquant.stra.backtest.Run.run("etc/demostralet.conf", "etc/backtest.conf")
-        case "realtime" => xtz.tquant.stra.realtime.Run.run("etc/demostralet.conf", "etc/realtime.conf")
+        case "backtest" => xtz.tquant.stra.backtest.Run.runPath("etc/demostralet.conf", "etc/backtest.conf")
+        case "realtime" => xtz.tquant.stra.realtime.Run.runPath("etc/demostralet.conf", "etc/realtime.conf")
     }
 
 }

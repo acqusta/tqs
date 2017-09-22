@@ -7,6 +7,7 @@ import akka.actor.{Actor, Cancellable}
 import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
 import xtz.tquant.api.scala.TradeApi.{Order, Trade}
 import xtz.tquant.api.scala.{DataApi, TradeApi}
+import xtz.tquant.stra.realtime.Config.RTConfig
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
 
 import scala.concurrent.duration.{DurationInt, _}
@@ -14,16 +15,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable
 
 
-case class StraletConfig (
+case class StraletInfo (
     id            : String,
     stralet_class : String,
     parameters    : Map[String, Any]
 )
 
+case class StraletConfig(
+    stralet : StraletInfo
+)
 
 object StraletActor {
 
-    case class InitReq(cfg : StraletConfig)
+    case class InitReq(cfg : StraletConfig, rt_cfg : RTConfig)
     case class InitRsp(result: Boolean, msg : String)
 
     case class PostEvent(evt: String, data: Any)
@@ -48,7 +52,7 @@ class StraletActor extends Actor with StraletContext{
 
     override def receive = {
 
-        case InitReq(cfg : StraletConfig)             => onInitReq(cfg : StraletConfig)
+        case req : InitReq                            => onInitReq(req)
 
         case PostEvent(evt : String, data : Any)      => onPostEvent(evt, data)
 
@@ -60,22 +64,22 @@ class StraletActor extends Actor with StraletContext{
         case timer : Timer                            => onTimer(timer)
     }
 
-    def onInitReq(cfg : StraletConfig) = {
+    def onInitReq(req : InitReq) = {
 
         try {
-            this.cfg = cfg
-            logger = org.slf4j.LoggerFactory.getLogger(cfg.id)
+            this.cfg = req.cfg
+            logger = org.slf4j.LoggerFactory.getLogger(cfg.stralet.id)
 
-            logger.info("create stralet: " + cfg.id + "," + cfg.stralet_class)
+            logger.info("create stralet: " + cfg.stralet.id + "," + cfg.stralet.stralet_class)
 
-            val clazz = Class.forName(cfg.stralet_class).asInstanceOf[Class[Stralet]]
+            val clazz = Class.forName(cfg.stralet.stralet_class).asInstanceOf[Class[Stralet]]
             val arg_classes = new Array[Class[_]](0)
             val constructor = clazz.getDeclaredConstructor(arg_classes : _*)
 
             stralet = constructor.newInstance()
 
-            tapi = new TradeApiImpl(this.self, Config.conf.tqc.addr)
-            dapi = new DataApiImpl(this.self, Config.conf.tqc.addr)
+            tapi = new TradeApiImpl(this.self, req.rt_cfg.tqc.addr)
+            dapi = new DataApiImpl(this.self,  req.rt_cfg.tqc.addr)
 
             stralet.onInit(this)
             sender() ! InitRsp(result = true, null)
@@ -149,6 +153,18 @@ class StraletActor extends Actor with StraletContext{
 
     override def getTime : LocalDateTime = LocalDateTime.now
 
+    override def getTradingDay: Int = {
+        // FIXME:
+        val (date, time) = getTimeAsInt
+        if (time > 80000000 && time < 160000000) {
+            date
+        } else {
+            assert (false)
+            0
+        }
+
+    }
+
     val timer_map = mutable.HashMap[Int, Cancellable]()
 
     override def setTimer(id: Int, delay: Int, data: Any) : Unit = {
@@ -183,6 +199,8 @@ class StraletActor extends Actor with StraletContext{
     }
 
     override def getParameters[T: Manifest](name : String, def_value: T) : T = {
-        cfg.parameters.getOrElse(name, def_value).asInstanceOf[T]
+        cfg.stralet.parameters.getOrElse(name, def_value).asInstanceOf[T]
     }
+
+    override def mode : String = "realtime"
 }

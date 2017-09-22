@@ -49,7 +49,7 @@ class TradeApiImpl(actor : ActorRef, addr : String) extends TradeApi {
     }
 
     override
-    def placeOrder(account_id : String, code : String, price : Double, size : Int, action : String, order_id: Int) : (OrderID, String) = {
+    def placeOrder(account_id : String, code : String, price : Double, size : Long, action : String, order_id: Int) : (OrderID, String) = {
 //        tapi.placeOrder(account_id = account_id, code = code, price = price, size = size,
 //            action=action, order_id=order_id)
         (null, "-1,FIXME: TestCode")

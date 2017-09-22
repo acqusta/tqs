@@ -10,7 +10,7 @@ import scala.collection.mutable
 
 class SimDataApi(st: StraletTest) extends DataApi {
 
-    val _dapi = new TQuantApi(st.container.conf.data.tqc_addr).dataApi
+    val _dapi = new TQuantApi(st.container.conf.tqc.addr).dataApi
 
     var _calendar : Set[LocalDate] = _
 

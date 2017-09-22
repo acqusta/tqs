@@ -17,7 +17,7 @@ object SimAccount {
     class TradeData {
         var trading_day    : LocalDate = _
         var cur_entrust_no : Int = 0
-        val positions = mutable.HashMap[String, TradeApi.Position]()
+        val positions = mutable.HashMap[(String, String), TradeApi.Position]()
         val orders = mutable.ListBuffer[TradeApi.Order]()
         val trades = mutable.ListBuffer[TradeApi.Trade]()
         val balance = new Balance()
@@ -103,20 +103,28 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
       *
       * @return (matched, err_msg)
       */
-    def tryMatchDeal(code : String, price : Double, size : Int, action : String) : (Boolean, String) = {
+    def tryMatchDeal(code : String, price : Double, size : Long, action : String) : (Boolean, String) = {
+
+        val is_future = {
+            code.split('.').last match {
+                case "SH" => false
+                case "SZ" => false
+                case _ => true
+            }
+        }
         action.toUpperCase match {
             case "BUY" =>
                 val cost = price * size
                 if (cur_data.balance.enable_balance >= cost) {
                     cur_data.balance.enable_balance -= cost
-                    val pos = cur_data.positions.getOrElse( code, null)
+                    val pos = cur_data.positions.getOrElse( (code, "Long"), null)
                     if (pos == null) {
-                        cur_data.positions += code -> TradeApi.Position(
+                        cur_data.positions += (code, "Long") -> TradeApi.Position(
                             account_id  = account_id,
                             code        = code,
                             name        = code,
                             current_size = size,
-                            enable_size = 0,
+                            enable_size = if (is_future) size else 0,
                             side        = "Long",
                             cost        = cost,
                             cost_price  = price,
@@ -124,12 +132,12 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                             holding_pnl = 0.0,
                             margin      = 0.0)
                     } else {
-                        cur_data.positions += code -> TradeApi.Position (
+                        cur_data.positions += (code, "Long") -> TradeApi.Position (
                             account_id  = pos.account_id,
                             code        = pos.code,
                             name        = pos.name,
                             current_size = pos.current_size + size,
-                            enable_size = pos.enable_size,
+                            enable_size = pos.enable_size + (if (is_future) size else 0),
                             side        = pos.side,
                             cost        = pos.cost + cost,
                             cost_price  = (pos.cost + cost) / pos.current_size,
@@ -143,10 +151,10 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                     (false, "no enough avail")
                 }
             case "SELL" =>
-                val pos = cur_data.positions.getOrElse( code, null)
+                val pos = cur_data.positions.getOrElse( (code, "Long"), null)
                 if (pos != null && pos.enable_size >= size) {
                     val cost = price * size
-                    cur_data.positions += code -> TradeApi.Position (
+                    cur_data.positions += (code, "Long") -> TradeApi.Position (
                         account_id  = pos.account_id,
                         code        = pos.code,
                         name        = pos.name,
@@ -164,7 +172,66 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                 } else {
                     (false, "no enough enable_size")
                 }
-            case _ => (false, "unsupported action")
+            case "SHORT" =>
+                val cost = price * size
+                if (cur_data.balance.enable_balance >= cost) {
+                    cur_data.balance.enable_balance -= cost
+                    val pos = cur_data.positions.getOrElse( (code, "Short"), null)
+                    if (pos == null) {
+                        cur_data.positions += (code, "Short") -> TradeApi.Position(
+                            account_id  = account_id,
+                            code        = code,
+                            name        = code,
+                            current_size = size,
+                            enable_size = if (is_future) size else 0,
+                            side        = "Short",
+                            cost        = cost,
+                            cost_price  = price,
+                            last_price  =  0.0,
+                            holding_pnl = 0.0,
+                            margin      = 0.0)
+                    } else {
+                        cur_data.positions += (code, "Short") -> TradeApi.Position (
+                            account_id  = pos.account_id,
+                            code        = pos.code,
+                            name        = pos.name,
+                            current_size = pos.current_size + size,
+                            enable_size = pos.enable_size + (if (is_future) size else 0),
+                            side        = pos.side,
+                            cost        = pos.cost + cost,
+                            cost_price  = (pos.cost + cost) / pos.current_size,
+                            last_price  =  0.0,
+                            holding_pnl = 0.0,
+                            margin      = 0.0
+                        )
+                    }
+                    (true, "")
+                } else {
+                    (false, "no enough avail")
+                }
+            case "COVER" =>
+                val pos = cur_data.positions.getOrElse( (code, "Short"), null)
+                if (pos != null && pos.enable_size >= size) {
+                    val cost = price * size
+                    cur_data.positions += (code, "Short") -> TradeApi.Position (
+                        account_id  = pos.account_id,
+                        code        = pos.code,
+                        name        = pos.name,
+                        current_size = pos.current_size - size,
+                        enable_size = pos.enable_size - size,
+                        side        = pos.side,
+                        cost        = pos.cost - cost,
+                        cost_price  = pos.cost_price,
+                        last_price  =  0.0,
+                        holding_pnl = 0.0,
+                        margin      = 0.0
+                    )
+                    cur_data.balance.enable_balance += cost
+                    (true, "")
+                } else {
+                    (false, "no enough enable_size")
+                }
+            case _ => (false, s"unsupported action $action")
         }
     }
 
@@ -174,7 +241,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
       *
       * @return entrust_no
       */
-    def insertOrder(matched: Boolean, code : String, price : Double, size : Int, action : String) : String = {
+    def insertOrder(matched: Boolean, code : String, price : Double, size : Long, action : String) : String = {
         cur_data.cur_entrust_no += 1
         val entrust_no = s"SIM-${cur_data.cur_entrust_no}"
 
@@ -228,10 +295,29 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
         entrust_no
     }
 
-    def placeOrder(code : String, price : Double, size : Int, action : String) : (OrderID, String) = {
+    def placeOrder(code : String, price : Double, size : Long, action : String) : (OrderID, String) = {
 
         val (date, time) = this.sim.getSimTime
-        if (time < 93000000 || (time>113000000 && time < 1300000) || time > 150000000) {
+        val mkt = code.split('.').last
+
+        val is_open_time = {
+
+            val is_future =
+                mkt match {
+                    case "SH" => false
+                    case "SZ" => false
+                    case _ => true
+                }
+
+            if (is_future) {
+                (time >= 90000000 && time < 101500000) ||
+                (time >= 1030000 && time < 113000000) ||
+                (time > 1300000 && time < 150000000)
+            } else {
+                (time >= 93000000 && time<113000000) || (time > 1300000 && time < 150000000)
+            }
+        }
+        if (!is_open_time) {
             println("ERROR: place order when market is closed!")
             return (null, "market is closed")
         }
@@ -321,7 +407,7 @@ class SimTradeApi(st: StraletTest) extends TradeApi {
     }
 
     override
-    def placeOrder(account_id : String, code : String, price : Double, size : Int, action : String, order_id: Int) : (OrderID, String) = {
+    def placeOrder(account_id : String, code : String, price : Double, size : Long, action : String, order_id: Int) : (OrderID, String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
             act.placeOrder(code, price, size, action)

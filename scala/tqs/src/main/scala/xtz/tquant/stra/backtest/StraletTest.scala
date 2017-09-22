@@ -3,12 +3,15 @@ package xtz.tquant.stra.backtest
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 
-import xtz.tquant.stra.backtest.StraletTest.{StraletTestConfig, TestConfig}
+import xtz.tquant.stra.backtest.StraletTest.{BackTestConfig, _StraletTestConfig}
 import xtz.tquant.stra.stralet.Stralet
+import xtz.tquant.stra.utils.JsonHelper
 import xtz.tquant.stra.utils.TimeUtils._
 
+import scala.io.Source
+
 object StraletTest {
-    case class StraletTestConfig(
+    case class _StraletTestConfig(
         servlet_id    : String,
         servlet_class : Class[Stralet],
         accounts      : Seq[String],
@@ -18,38 +21,43 @@ object StraletTest {
         data_level    : String
     )
 
-    case class StraletConfig(
+    case class StraletInfo (
         id            : String,
         stralet_class : String,
         parameters    : Map[String, Any]
     )
 
-    case class BackTestConfig(
+    case class StraletConfig(
+        stralet : StraletInfo
+    )
+
+    case class TqcConfig (
+        addr  : String
+    )
+
+    case class BastTestOption(
          date_range  : Seq[Int],
          accounts    : Seq[String],
          data_level  : String
+
+    )
+    case class BackTestConfig(
+        tqc         : TqcConfig,
+        backtest    : BastTestOption
      )
 
-    case class TestConfig(
-         stralet  : StraletConfig,
-         backtest : BackTestConfig
-    )
+    def parseTestConfig( text : String) : BackTestConfig = {
+        //var text = Source.fromFile(path).mkString
+        JsonHelper.deserialize[StraletTest.BackTestConfig](text)
+    }
 }
 
-//def load(path: String): TestConfig = {
-//
-//var text = Source.fromFile(path).mkString
-//
-//val config = JsonHelper.deserialize[TestConfig](text)
-//config
-//}
-
-class StraletTest(_container: Container, _cfg: StraletTestConfig) {
+class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
 
     val tapi = new SimTradeApi(this)
     val dapi = new SimDataApi(this)
 
-    def cfg : StraletTestConfig = _cfg
+    def cfg : _StraletTestConfig = _cfg
 
     def container : Container = _container
 

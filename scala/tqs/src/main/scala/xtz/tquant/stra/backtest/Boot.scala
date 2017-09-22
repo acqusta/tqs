@@ -19,5 +19,5 @@ object Boot extends App {
 
     val stralet_conf = line.getOptionValue("f")
 
-    Run.run(stralet_conf, "etc/backtest.conf")
+    Run.runPath(stralet_conf, "etc/backtest.conf")
 }
