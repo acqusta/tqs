@@ -33,8 +33,8 @@ class SimDataApi(st: StraletTest) extends DataApi {
         _calendar = bars.map( _.date.toLocalDate).toSet
     }
 
-    private def loadBar(code : String, cycle : String, trading_day: Int, price_adj: String) : Seq[DataApi.Bar] = {
-        val (bars, msg) = _dapi.bar(code, cycle, trading_day=trading_day, price_adj=price_adj)
+    private def loadBar(code : String, cycle : String, trading_day: Int, price_adj: String, align : Boolean) : Seq[DataApi.Bar] = {
+        val (bars, msg) = _dapi.bar(code, cycle, trading_day=trading_day, price_adj=price_adj, align=align)
         assert(bars!=null, s"$code bar error:" + msg)
         bars
     }
@@ -203,7 +203,7 @@ class SimDataApi(st: StraletTest) extends DataApi {
       * @param trading_day
       * @return
       */
-    override def bar(code: String, cycle: String, trading_day: Int, price_adj: String): (Seq[DataApi.Bar], String) = {
+    override def bar(code: String, cycle: String, trading_day: Int, price_adj: String, align : Boolean): (Seq[DataApi.Bar], String) = {
 
         if (st.cfg.data_level != cycle) {
             val cycle_ok =
@@ -223,16 +223,20 @@ class SimDataApi(st: StraletTest) extends DataApi {
              cycle == "1m" &&
             (st.cfg.data_level == "1m" || st.cfg.data_level == "tk"))
         {
-            val bi = today_bars.getOrElse(code, null)
-            if ( bi != null && bi.pos != -1) {
-                val b = bi.bars(bi.pos)
-                assert( b.date < date || (b.date == date && b.time <= time), s"wrong bar time: $code ${b.date} ${b.time}")
-                (bi.bars.splitAt( bi.pos + 1)._1, "")
+            if (!align) {
+                (null, "-1, backtest of bar 1m should be align")
             } else {
-                (null, s"-1, no bar data: $code $date $time")
+                val bi = today_bars.getOrElse(code, null)
+                if ( bi != null && bi.pos != -1) {
+                    val b = bi.bars(bi.pos)
+                    assert( b.date < date || (b.date == date && b.time <= time), s"wrong bar time: $code ${b.date} ${b.time}")
+                    (bi.bars.splitAt( bi.pos + 1)._1, "")
+                } else {
+                    (null, s"-1, no bar data: $code $date $time")
+                }
             }
         } else {
-            val bars = loadBar(code, cycle, if (trading_day == 0) date else trading_day, price_adj)
+            val bars = loadBar(code, cycle, if (trading_day == 0) date else trading_day, price_adj, align)
 
             // 只能取得“今日”之前的日线数据
             if (cycle == "1d") {
@@ -284,37 +288,6 @@ class SimDataApi(st: StraletTest) extends DataApi {
                 0, 0) // oi
 
             (q, "0,quote from bar1d!")
-//        } else {
-//            val bi = today_bars.getOrElse(code, null)
-//            if (bi == null) return (null, "no bar data")
-//
-//            if (bi.pos + 1 >= today_bars.size)
-//                return (null, "-1, last bar")
-//
-//            val (date, time) = st.curSimContext.getTimeAsInt
-//            //val future_bar = bi.bars.filter(_.time >= time)
-//            //if (future_bar.isEmpty ) return (null, "market closed")
-//
-//            var last = 0.0
-//            if (time >= 150000000)
-//                last = future_bar.last.open
-//            else
-//                last = future_bar.head.open
-//
-//            val q = DataApi.MarketQuote(code, date, time, st.curSimContext.getTradingDay,
-//                0.0, 0.0, 0.0, 0.0, // fixme, OHLC
-//                last,
-//                0.0, 0.0,
-//                0.0, // pre_close
-//                0, 0.0, // volume, turnover
-//                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-//                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-//                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-//                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-//                0.0, 0.0,
-//                0, 0) // oi
-//
-//            (q, "0,quote from bar!")
         } else {
             val ti = today_ticks.getOrElse(code, null)
             if (ti == null) return (null, "-1,no tick data")
@@ -350,7 +323,7 @@ class SimDataApi(st: StraletTest) extends DataApi {
 
         today_bars ++= subed_codes.diff(today_bars.keys.toSet)
                             .map{ code =>
-                                val bars = this.loadBar(code, cycle, this.st.curSimContext.getTradingDay, "forward")
+                                val bars = this.loadBar(code, cycle, this.st.curSimContext.getTradingDay, price_adj = "forward", align = true)
                                 var pos = bars.length
                                 for ( i  <- bars.indices if pos == bars.length) {
                                     if ( lastBartime(bars(i).date, bars(i).time) > cur_bar_time) pos = i

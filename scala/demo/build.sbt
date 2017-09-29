@@ -34,7 +34,10 @@ libraryDependencies += "com.typesafe.akka"  %% "akka-testkit"            % akkaV
 
 packAutoSettings
 
-packMain        := Map("rbreaker" -> "cta.RBreakerStralet")
+packMain        := Map(
+    "rbreaker" -> "cta.RBreakerStralet",
+    "lsma"     -> "cta.LongShortMAStralet"
+)
 
 //packJvmOpts     := Map("tqs-backtest" -> Seq(
 //  "-Djava.library.path=${PROG_HOME}/lib"

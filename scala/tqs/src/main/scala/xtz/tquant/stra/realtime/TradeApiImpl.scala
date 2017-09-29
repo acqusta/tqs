@@ -1,11 +1,15 @@
 package xtz.tquant.stra.realtime
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import akka.actor.ActorRef
 import xtz.tquant.api.scala.{TQuantApi, TradeApi}
 import xtz.tquant.api.scala.TradeApi._
 
 
 class TradeApiImpl(actor : ActorRef, addr : String) extends TradeApi {
+
 
     val tapi = new TQuantApi(addr).tradeApi
 
@@ -48,15 +52,22 @@ class TradeApiImpl(actor : ActorRef, addr : String) extends TradeApi {
         tapi.queryPosition(account_id)
     }
 
+    private val _log_df = DateTimeFormatter.ofPattern("yyyyMMdd HHmmss.SSS")
+
     override
     def placeOrder(account_id : String, code : String, price : Double, size : Long, action : String, order_id: Int) : (OrderID, String) = {
-//        tapi.placeOrder(account_id = account_id, code = code, price = price, size = size,
-//            action=action, order_id=order_id)
-        (null, "-1,FIXME: TestCode")
+
+        println(LocalDateTime.now.format(_log_df) + " " + s"place order($account_id, $code, $price, $size, $action, $order_id)")
+
+        tapi.placeOrder(account_id = account_id, code = code, price = price, size = size,
+            action=action, order_id=order_id)
     }
 
     override
     def cancelOrder(account_id : String, code : String, entrust_no : String, order_id : Int) : (Boolean, String) = {
+
+        println(LocalDateTime.now.format(_log_df) + " " + s"cancel order($account_id, $code, $entrust_no, $order_id)")
+
         tapi.cancelOrder(account_id, code, entrust_no, order_id)
     }
 

@@ -3,7 +3,6 @@ package cta
 import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
 import xtz.tquant.api.scala.TradeApi.{Order, Trade}
 import xtz.tquant.api.scala.{DataApi, TradeApi}
-import xtz.tquant.stra.backtest.{Container, StraletTest}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
 import xtz.tquant.stra.utils.CsvHelper
 
@@ -42,11 +41,8 @@ import scala.io.Source
 // 其中，High、Close、Low 分别为昨日最高价、昨日收盘价和昨日最低价。这六个价位从大到小一次是，突破买入价、观察爱出价、反转卖出价、反转
 // 买入价、观察买入价和突破卖出价。
 
-case class MainContract(date : Int, main: String)
-
 class RBreakerStralet extends Stralet {
 
-    val talib = new com.tictactec.ta.lib.Core()
     var account = ""
     var trade_api : TradeApi = _
     var data_api  : DataApi = _
@@ -78,18 +74,14 @@ class RBreakerStralet extends Stralet {
 
         // 从配置中得到要交易的商品期货，然后从主力合约映射表中得到今日交易的合约
 
-        val future = sc.getParameters[String]("future", "")
-        assert( future.nonEmpty, "no future  in config")
+        val code = sc.getParameters[String]("code", "")
+        assert( code.nonEmpty, "no future  in config")
 
         contract =
             if (sc.mode == "realtime") {
                 "rb1801.SHF"
             } else {
-                val main_contracts = CsvHelper.deserialize[MainContract](Source.fromFile("etc/" + future + ".csv").mkString)
-                val today_contract = main_contracts.find( _.date == sc.getTradingDay).orNull
-                assert (today_contract != null, s"no main contract ${sc.getTradingDay}")
-
-                today_contract.main
+                code
             }
 
         sc.log("trade contract: " + contract)
@@ -102,17 +94,8 @@ class RBreakerStralet extends Stralet {
 
         // 从上个交易日价格计算出今天的价格区间
         val last_day = daily_bar.last
+        price_range = calcPriceRange(last_day.high, last_day.low, last_day.close)
 
-        val sell_setup = last_day.high+0.35*(last_day.close-last_day.low) //# 观察卖出价
-        val buy_setup  = last_day.low-0.35*(last_day.high-last_day.close) // 观察买入价
-        val sell_enter = (1 + 0.07) / 2 * (last_day.high + last_day.low)-0.07 * last_day.low // # 反转卖出价
-        val buy_enter  = (1 + 0.07) / 2 *(last_day.high+last_day.low)-0.07*last_day.high // # 反转买入价
-        val sell_break = buy_setup - 0.25*(sell_setup - buy_setup) // # 突破卖出价
-        val buy_break  = sell_setup + 0.25*(sell_setup - buy_setup) //# 突破买入价
-
-        price_range = PriceRange ( sell_setup = sell_setup, buy_setup = buy_setup,
-                        sell_enter = sell_enter, buy_enter = buy_enter,
-                        sell_break = sell_break, buy_break = buy_break)
         sc.log(price_range)
     }
 
@@ -135,13 +118,72 @@ class RBreakerStralet extends Stralet {
         //        sc.log("quote", q.code, q.date, q.time, sc.getTimeAsInt)
     }
 
+    def calcPriceRange(high: Double, low : Double, close :Double) : PriceRange = {
+
+        val high_beta  = 0.35
+        val low_beta   = 0.25
+        val enter_beta = 0.07
+
+        val sell_setup = high + high_beta * (close - low) //# 观察卖出价
+        val buy_setup  = low  - high_beta * (high  - close) // 观察买入价
+        val sell_enter = (1 + enter_beta) / 2 * (high + low) - enter_beta * low // # 反转卖出价
+        val buy_enter  = (1 + enter_beta) / 2 * (high + low) - enter_beta * high // # 反转买入价
+        val sell_break = buy_setup  - low_beta * (sell_setup - buy_setup) // # 突破卖出价
+        val buy_break  = sell_setup + low_beta * (sell_setup - buy_setup) //# 突破买入价
+
+        PriceRange ( sell_setup = sell_setup, buy_setup = buy_setup,
+            sell_enter = sell_enter, buy_enter = buy_enter,
+            sell_break = sell_break, buy_break = buy_break)
+
+    }
+
+    def isFinished(order : Order): Boolean = {
+        order.status match {
+            case "Filled"    => true
+            case "Cancelled" => true
+            case "Rejected"  => true
+            case _ => false
+        }
+    }
+
+    def cancelUnfinshedOrder() : Unit = {
+        val (orders, msg) = sc.getTradeApi.queryOrders(this.account)
+        if (orders == null) {
+            sc.log("ERROR: queryOrders failed: " + msg)
+            return
+        }
+
+        val unfinished_orders = orders.filter( x => x.code == this.contract && !isFinished(x) )
+        for ( ord <- unfinished_orders) {
+            sc.getTradeApi.cancelOrder(this.account, code = this.contract, entrust_no = ord.entrust_no, order_id = ord.order_id)
+        }
+    }
 
     override def onBar(cycle : String, bar : Bar): Unit = {
 
         if (cycle != "1m") return
         if (bar.code != this.contract) return
 
-        sc.log(bar)
+        if (sc.mode == "realtime") sc.log(bar)
+
+        if ( bar.time == 93100000) {
+
+            // 从夜盘行情中取 high, low, close计算
+            val (bars, msg) = data_api.bar(this.contract, cycle="1m", align = true);
+            assert(bars != null)
+
+            var high = 0.0
+            var low = 100000000.0
+            var close = 0.0
+            for (b <- bars) {
+                if (b.high > high) high = b.high
+                if (b.low < low)   low  = b.low
+                close = b.close
+            }
+            price_range = calcPriceRange(high, low, close)
+            sc.log("night data", price_range)
+            return
+        }
 
         // 只交易日盘
         if (bar.time < 90000000 || bar.time > 150000000)
@@ -149,9 +191,8 @@ class RBreakerStralet extends Stralet {
 
         val trading_day = sc.getTradingDay
         val bars = {
-            val (tmp, _) = data_api.bar(this.contract, "1m")
+            val (tmp, _) = data_api.bar(this.contract, "1m", align = true)
             tmp.filter( x => x.date == trading_day && x.time > 90000000 )
-            tmp
         }
 
         if (bars.length < 2) return
@@ -166,6 +207,7 @@ class RBreakerStralet extends Stralet {
             else
                 (v._1 , v._2 + x.current_size)
         }
+
 
         val last_price = data_api.quote(contract)._1.last
 
@@ -245,7 +287,7 @@ object RBreakerStralet extends App {
           |
           |    "parameters": {
           |      "account": "simnow",
-          |      "future" : "rb.SHF"
+          |      "code"   : "rb.SHF"
           |    }
           |  }
           |}
@@ -260,7 +302,7 @@ object RBreakerStralet extends App {
           |
           |  "backtest" : {
           |    "data_level" : "1m",
-          |    "date_range" : [ 20170620, 20170831],
+          |    "date_range" : [ 20170620, 20170922],
           |    "accounts"   : ["simnow"]
           |  }
           |}

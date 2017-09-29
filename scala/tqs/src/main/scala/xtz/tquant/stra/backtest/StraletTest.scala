@@ -1,5 +1,7 @@
 package xtz.tquant.stra.backtest
 
+import java.io.File
+import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 
@@ -77,7 +79,7 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
         cfg.data_level match {
             case "tk" => runTkOr1m()
             case "1m" => runTkOr1m()
-            case "1d" => run1d()
+            case "1d" => runDailyTest()
         }
 
         println( LocalDateTime.now())
@@ -85,7 +87,10 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
         val df = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmssSSS")
         val time_lable = LocalDateTime.now().format(df)
 
-        val order_file = s"Trade-${cfg.servlet_id}-${cfg.first_date.toHumanDate}-${cfg.last_date.toHumanDate}-${time_lable}.csv"
+        val order_file = s"result/Trade-${cfg.servlet_id}-${cfg.first_date.toHumanDate}-${cfg.last_date.toHumanDate}-$time_lable.csv"
+
+        if (!Files.exists(Paths.get("result"))) new File("result").mkdir()
+
         tapi.saveOrder(order_file)
     }
 
@@ -100,6 +105,7 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
                 runOneDay( day)
             day = day.plusDays(1)
         }
+        tapi.moveTo(day.plusDays(1))
     }
 
     private def runOneDay(day : LocalDate): Unit = {
@@ -135,6 +141,8 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
 
         stralet.onFini()
         sc = null
+
+        tapi.moveTo(day.plusDays(1))
     }
 
     /**
@@ -143,7 +151,7 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
       * 创建一个Stralet，用日线Bar驱动该stralet，类似日内的Stralet测试。Stralet.onBar中收到 cycle="1d"的bar。
       *
       */
-    def run1d() : Unit = {
+    def runDailyTest() : Unit = {
 
         val arg_classes = new Array[Class[_]](0)
         val constructor = cfg.servlet_class.getDeclaredConstructor(arg_classes : _*)

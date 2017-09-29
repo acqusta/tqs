@@ -25,8 +25,8 @@ class DataApiImpl (actorRef: ActorRef, tqc_addr : String) extends DataApi {
         }
     })
 
-    override def bar(code: String, cycle: String, trading_day: Int, price_adj: String): (Seq[DataApi.Bar], String) = {
-        dapi.bar(code, cycle, trading_day, price_adj)
+    override def bar(code: String, cycle: String, trading_day: Int, price_adj: String, align : Boolean): (Seq[DataApi.Bar], String) = {
+        dapi.bar(code, cycle, trading_day, price_adj, align)
     }
 
     override def quote(code : String) : (DataApi.MarketQuote, String) = {

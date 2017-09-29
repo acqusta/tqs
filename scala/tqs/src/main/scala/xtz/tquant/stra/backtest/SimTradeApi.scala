@@ -57,12 +57,17 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                             name         = pos.name,
                             current_size = pos.current_size,
                             enable_size  = pos.current_size,
+                            init_size    = 0,
+                            today_size   = 0,
+                            frozen_size  = 0,
                             side         = pos.side,
                             cost         = pos.cost,
                             cost_price   = pos.cost_price,
                             last_price   = 0.0,
-                            holding_pnl  = 0.0,
-                            margin       = 0.0
+                            float_pnl    = 0.0,
+                            close_pnl    = 0.0,
+                            margin       = 0.0,
+                            commission   = 0.0
                         )
             }
 
@@ -125,12 +130,17 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                             name        = code,
                             current_size = size,
                             enable_size = if (is_future) size else 0,
+                            init_size   = 0,
+                            frozen_size = 0,
+                            today_size  = 0,
                             side        = "Long",
                             cost        = cost,
                             cost_price  = price,
                             last_price  =  0.0,
-                            holding_pnl = 0.0,
-                            margin      = 0.0)
+                            float_pnl   = 0.0,
+                            close_pnl   = 0.0,
+                            margin      = 0.0,
+                            commission  = 0.0)
                     } else {
                         cur_data.positions += (code, "Long") -> TradeApi.Position (
                             account_id  = pos.account_id,
@@ -138,13 +148,17 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                             name        = pos.name,
                             current_size = pos.current_size + size,
                             enable_size = pos.enable_size + (if (is_future) size else 0),
+                            init_size   = 0,
+                            frozen_size = 0,
+                            today_size  = 0,
                             side        = pos.side,
                             cost        = pos.cost + cost,
                             cost_price  = (pos.cost + cost) / pos.current_size,
-                            last_price  =  0.0,
-                            holding_pnl = 0.0,
-                            margin      = 0.0
-                        )
+                            last_price  = 0.0,
+                            float_pnl   = 0.0,
+                            close_pnl   = 0.0,
+                            commission  = 0.0,
+                            margin      = 0.0 )
                     }
                     (true, "")
                 } else {
@@ -160,13 +174,18 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                         name        = pos.name,
                         current_size = pos.current_size - size,
                         enable_size = pos.enable_size - size,
+                        init_size   = 0,
+                        frozen_size = 0,
+                        today_size  = 0,
                         side        = pos.side,
                         cost        = pos.cost - cost,
                         cost_price  = pos.cost_price,
                         last_price  =  0.0,
-                        holding_pnl = 0.0,
-                        margin      = 0.0
-                    )
+                        float_pnl   = 0.0,
+                        close_pnl   = 0.0,
+                        commission  = 0.0,
+                        margin      = 0.0 )
+
                     cur_data.balance.enable_balance += cost
                     (true, "")
                 } else {
@@ -184,12 +203,18 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                             name        = code,
                             current_size = size,
                             enable_size = if (is_future) size else 0,
+                            init_size   = 0,
+                            frozen_size = 0,
+                            today_size  = 0,
                             side        = "Short",
                             cost        = cost,
                             cost_price  = price,
                             last_price  =  0.0,
-                            holding_pnl = 0.0,
-                            margin      = 0.0)
+                            float_pnl   = 0.0,
+                            close_pnl   = 0.0,
+                            commission  = 0.0,
+                            margin      = 0.0 )
+
                     } else {
                         cur_data.positions += (code, "Short") -> TradeApi.Position (
                             account_id  = pos.account_id,
@@ -197,13 +222,17 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                             name        = pos.name,
                             current_size = pos.current_size + size,
                             enable_size = pos.enable_size + (if (is_future) size else 0),
+                            init_size   = 0,
+                            frozen_size = 0,
+                            today_size  = 0,
                             side        = pos.side,
                             cost        = pos.cost + cost,
                             cost_price  = (pos.cost + cost) / pos.current_size,
                             last_price  =  0.0,
-                            holding_pnl = 0.0,
-                            margin      = 0.0
-                        )
+                            float_pnl   = 0.0,
+                            close_pnl   = 0.0,
+                            commission  = 0.0,
+                            margin      = 0.0 )
                     }
                     (true, "")
                 } else {
@@ -219,13 +248,17 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                         name        = pos.name,
                         current_size = pos.current_size - size,
                         enable_size = pos.enable_size - size,
+                        init_size   = 0,
+                        frozen_size = 0,
+                        today_size  = 0,
                         side        = pos.side,
                         cost        = pos.cost - cost,
                         cost_price  = pos.cost_price,
                         last_price  =  0.0,
-                        holding_pnl = 0.0,
-                        margin      = 0.0
-                    )
+                        float_pnl   = 0.0,
+                        close_pnl   = 0.0,
+                        commission  = 0.0,
+                        margin      = 0.0 )
                     cur_data.balance.enable_balance += cost
                     (true, "")
                 } else {
@@ -260,7 +293,8 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                 entrust_time   = time,
                 fill_price     = price,
                 fill_size      = size,
-                status         = "Filled"
+                status         = "Filled",
+                order_id       = 0
             )
 
             cur_data.trades += TradeApi.Trade(
@@ -288,7 +322,8 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                 entrust_time    = time,
                 fill_price      = price,
                 fill_size       = size,
-                status          = "Rejected"
+                status          = "Rejected",
+                order_id        = 0
             )
         }
 
@@ -434,30 +469,6 @@ class SimTradeApi(st: StraletTest) extends TradeApi {
     }
 
     def saveOrder(path: String): Unit = {
-//        val orders = mutable.ArrayBuffer[OrderSaveData]()
-//        for ( (id, act) <- accounts ) {
-//
-//            for ( data <- act.his_data) {
-//                val trading_day = data.trading_day.toHumanDate
-//
-//                orders ++= data.orders.map( ord =>
-//                                OrderSaveData(
-//                                        ID              = ord.account_id,
-//                                        DATE            = trading_day,
-//                                        CODE            = ord.code ,
-//                                        ENTRUST_ACTION  = ord.entrust_action ,
-//                                        ENTRUST_DATE    = trading_day ,
-//                                        ENTRUST_TIME    = ord.entrust_time ,
-//                                        ENTRUST_PRICE   = ord.entrust_price ,
-//                                        ENTRUST_SIZE    = ord.entrust_size ,
-//                                        FILL_SIZE       = ord.fill_size ,
-//                                        FILL_PRICE      = ord.fill_price ,
-//                                        ENTRUST_NO      = ord.entrust_no ,
-//                                        STATUS          = ord.status ,
-//                                        STATUS_MSG      = "" )
-//                        )
-//            }
-//        }
         val orders = mutable.ArrayBuffer[TradeApi.Order]()
         for ( (_, a) <- accounts) {
             for ( data <- a.his_data)
