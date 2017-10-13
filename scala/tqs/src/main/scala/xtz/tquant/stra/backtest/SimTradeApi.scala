@@ -1,5 +1,6 @@
 package xtz.tquant.stra.backtest
 
+import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 
 import scala.collection.mutable
@@ -465,7 +466,20 @@ class SimTradeApi(st: StraletTest) extends TradeApi {
     }
 
     override def query(account_id: String, command: String, params: String): (String, String) = {
-        (null, "-1,don't support")
+        command match {
+            case "ctp_codetable" =>
+                val stream = getClass.getResourceAsStream("/sim/ctp_codetable.csv")
+                val baos = new ByteArrayOutputStream()
+                val bytes = new Array[Byte](4096)
+                var len = stream.read(bytes)
+                while ( len > 0 ) {
+                    baos.write(bytes, 0, len)
+                    len = stream.read(bytes)
+                }
+                (new String(baos.toByteArray(), "utf-8"), "")
+            case _ =>
+            (null, "-1,don't support")
+        }
     }
 
     def saveOrder(path: String): Unit = {
