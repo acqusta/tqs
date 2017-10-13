@@ -66,6 +66,7 @@ class LongShortMAStralet extends Stralet {
                 code
             }
 
+        //println (trade_api.query(this.account, "ctp_codetable"))
         sc.log("trade contract: " + contract)
 
         data_api.subscribe( Array(contract ))
@@ -163,10 +164,10 @@ class LongShortMAStralet extends Stralet {
         // 持仓不过夜
         if (bar.time >= 145500000) {
             if (long_size != 0)
-                trade_api.placeOrder(this.account, contract, last_price, long_size, "Sell")
+                trade_api.placeOrder(this.account, contract, last_price, long_size, "SellToday")
 
             if (short_size != 0)
-                trade_api.placeOrder(this.account, contract, last_price, short_size, "Cover")
+                trade_api.placeOrder(this.account, contract, last_price, short_size, "CoverToday")
 
             return
         }
@@ -174,14 +175,14 @@ class LongShortMAStralet extends Stralet {
         val max_open_size = 1
         if (ma_short.last > ma_long.last && ma_short(ma_short.length-2) < ma_long(ma_long.length - 2)) {
             if (short_size > 0)
-                trade_api.placeOrder(this.account, contract, last_price, short_size, "Cover")
+                trade_api.placeOrder(this.account, contract, last_price, short_size, "CoverToday")
 
             if (long_size < max_open_size)
                 trade_api.placeOrder(this.account, contract, last_price, max_open_size, "Buy")
         }
         else if (ma_short.last < ma_long.last && ma_short(ma_short.length-2) > ma_long(ma_long.length - 2)) {
             if (long_size > 0)
-                trade_api.placeOrder(this.account, contract, last_price, long_size, "Sell")
+                trade_api.placeOrder(this.account, contract, last_price, long_size, "SellToday")
 
             if (short_size < max_open_size)
                 trade_api.placeOrder(this.account, contract, last_price, max_open_size, "Short")
@@ -260,7 +261,7 @@ object LongShortMAStralet extends App {
     args(0) match {
         case "backtest" => xtz.tquant.stra.backtest.Run.runConf(stralet_config, backtest_config)
 
-        case "realtime" => xtz.tquant.stra.realtime.Run.runConf(stralet_config, "")//realtime_config)
+        case "realtime" => xtz.tquant.stra.realtime.Run.runConf(stralet_config, "")
     }
 
 }
