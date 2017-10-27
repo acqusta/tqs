@@ -13,7 +13,7 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
 
     private val _df = DateTimeFormatter.ofPattern("yyyyMMdd HHmmssSSS")
 
-    case class Timer(id: Int, delay: Int, data: Any, var next_time : LocalDateTime)
+    case class Timer(id: Int, delay: Long, data: Any, var next_time : LocalDateTime)
 
     private val timer_map = mutable.HashMap[Int, Timer]()
 
@@ -34,7 +34,7 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
         assert( st.cfg.data_level != "1d")
         assert( st.cfg.data_level != "1m")
 
-        timer_map += id -> Timer(id, delay, data, getTime.plusNanos(delay*1000000))
+        timer_map += id -> Timer(id, delay, data, getTime.plusNanos(delay*10000000))
     }
 
     override def killTimer(id: Int) : Unit = {
@@ -84,13 +84,15 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
 
         val timer = mutable.ArrayBuffer[Timer]()
         for ( (_, t) <- timer_map) {
-            if (t.next_time.isBefore(sim_time))
+            if (!t.next_time.isAfter(sim_time))
                 timer.append(t)
         }
 
         for ( t <-timer) {
-            if (timer_map.getOrElse(t.id, null) != null)
+            if (timer_map.getOrElse(t.id, null) != null) {
+                timer_map += t.id -> Timer(t.id, t.delay, t.data, t.next_time.plusNanos(t.delay * 10000000))
                 stralet.onTimer(t.id, t.data)
+            }
         }
     }
 

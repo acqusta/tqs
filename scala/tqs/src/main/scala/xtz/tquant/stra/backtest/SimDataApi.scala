@@ -291,8 +291,8 @@ class SimDataApi(st: StraletTest) extends DataApi {
         } else {
             val ti = today_ticks.getOrElse(code, null)
             if (ti == null) return (null, "-1,no tick data")
-            if (ti.pos<0) {
-                return (null, "-1,not arrive yet")
+            if (ti.pos < 0) {
+                (null, "-1,not arrive yet")
             } else {
                 (ti.ticks(ti.pos), "0,")
             }
@@ -300,7 +300,14 @@ class SimDataApi(st: StraletTest) extends DataApi {
     }
 
     override def tick(code: String, trading_day: Int): (Seq[MarketQuote], String)  = {
-        (null, "-1,fix me")
+        //(null, "-1,fix me")
+        val ti = today_ticks.getOrElse(code, null)
+        if (ti == null) return (null, "-1,no tick data")
+        if (ti.pos<0) {
+            return (null, "-1,not arrive yet")
+        } else {
+            (ti.ticks.splitAt(ti.pos + 1)._1, "0,")
+        }
     }
 
     override def subscribe(codes : Seq[String]) : (Seq[String], String) = {

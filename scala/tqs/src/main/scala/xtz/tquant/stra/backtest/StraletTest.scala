@@ -110,8 +110,8 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
 
     private def runOneDay(day : LocalDate): Unit = {
 
-        val begin_time = LocalDateTime.of(day, LocalTime.of( 0, 0,0))
-        val end_time   = LocalDateTime.of(day, LocalTime.of(15, 0,0))
+        val begin_time = LocalDateTime.of(day, LocalTime.of( 8, 59, 0))
+        val end_time   = LocalDateTime.of(day, LocalTime.of(15,  0, 0))
 
         tapi.moveTo(day)
         dapi.moveTo(day)
@@ -129,6 +129,12 @@ class StraletTest(_container: Container, _cfg: _StraletTestConfig) {
         var timer_time = end_time
 
         while (sc.moveToNextSimTime() != null && sc.getTime.isBefore(end_time)) {
+
+            tapi.tryMatch()
+
+            val (orders, trades) = tapi.getInd
+            orders.foreach ( stralet.onOrderStatus(_))
+            trades.foreach ( stralet.onOrderTrade(_))
 
             val quotes = dapi.subed_codes map { x => dapi.nextQuote(x) }
             quotes.foreach( x => if (x!=null) stralet.onQuote(x))
