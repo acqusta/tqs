@@ -118,7 +118,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
         val cur_price = {
             val q = this.sim.st.dapi.quote(code)
             if (q._1 != null)
-                q._1.last
+                q._1.ask1
             else
                 -1.0
         }
@@ -180,7 +180,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
         val cur_price = {
             val q = this.sim.st.dapi.quote(code)
             if (q._1 != null)
-                q._1.last
+                q._1.bid1
             else
                 -1.0
         }
@@ -278,7 +278,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
         val cur_price = {
             val q = this.sim.st.dapi.quote(code)
             if (q._1 != null)
-                q._1.last
+                q._1.bid1
             else
                 -1.0
         }
@@ -345,7 +345,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
         val cur_price = {
             val q = this.sim.st.dapi.quote(code)
             if (q._1 != null)
-                q._1.last
+                q._1.ask1
             else
                 -1.0
         }
