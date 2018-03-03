@@ -1,7 +1,7 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
-import xtz.tquant.stra.realtime.Config.RTConfig
-import xtz.tquant.stra.utils.JsonHelper
+import Config.RTConfig
+import com.acqusta.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
 

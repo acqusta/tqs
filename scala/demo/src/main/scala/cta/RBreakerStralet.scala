@@ -3,7 +3,8 @@ package cta
 import com.acqusta.tquant.api.scala.DataApi.{Bar, MarketQuote}
 import com.acqusta.tquant.api.scala.TradeApi.{Order, Trade}
 import com.acqusta.tquant.api.scala.{DataApi, TradeApi}
-import xtz.tquant.stra.stralet.{Stralet, StraletContext}
+import com.acqusta.tquant.stra.realtime.Run
+import com.acqusta.tquant.stra.stralet.{Stralet, StraletContext}
 
 import scala.io.Source
 
@@ -326,9 +327,9 @@ object RBreakerStralet extends App {
     }
 
     args(0) match {
-        case "backtest" => xtz.tquant.stra.backtest.Run.runConf(stralet_config, backtest_config)
+        case "backtest" => com.acqusta.tquant.stra.backtest.Run.runConf(stralet_config, backtest_config)
 
-        case "realtime" => xtz.tquant.stra.realtime.Run.runConf(stralet_config, "")//realtime_config)
+        case "realtime" => Run.runConf(stralet_config, "")//realtime_config)
     }
 
 }

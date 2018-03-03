@@ -1,4 +1,4 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
 import akka.actor.ActorRef
 import com.acqusta.tquant.api.scala.DataApi

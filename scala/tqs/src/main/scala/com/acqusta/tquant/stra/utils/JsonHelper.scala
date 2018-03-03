@@ -1,4 +1,4 @@
-package xtz.tquant.stra.utils
+package com.acqusta.tquant.stra.utils
 
 import java.lang.reflect.{ParameterizedType, Type}
 

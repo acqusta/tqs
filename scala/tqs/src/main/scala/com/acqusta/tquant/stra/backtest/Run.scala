@@ -1,8 +1,8 @@
-package xtz.tquant.stra.backtest
+package com.acqusta.tquant.stra.backtest
 
-import xtz.tquant.stra.backtest.StraletTest.BackTestConfig
-import xtz.tquant.stra.backtest.StraletTest.StraletConfig
-import xtz.tquant.stra.utils.JsonHelper
+import com.acqusta.tquant.stra.backtest.StraletTest.BackTestConfig
+import com.acqusta.tquant.stra.backtest.StraletTest.StraletConfig
+import com.acqusta.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
 

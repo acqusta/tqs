@@ -1,4 +1,4 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -7,8 +7,8 @@ import akka.actor.{Actor, Cancellable}
 import com.acqusta.tquant.api.scala.DataApi
 import com.acqusta.tquant.api.scala.DataApi.{Bar, MarketQuote}
 import com.acqusta.tquant.api.scala.TradeApi.{Order, Trade}
-import xtz.tquant.stra.realtime.Config.RTConfig
-import xtz.tquant.stra.stralet.{Stralet, StraletContext, TqsTradeApi}
+import com.acqusta.tquant.stra.realtime.Config.RTConfig
+import com.acqusta.tquant.stra.stralet.{Stralet, StraletContext, TqsTradeApi}
 
 import scala.concurrent.duration.{DurationInt, _}
 import scala.concurrent.ExecutionContext.Implicits.global

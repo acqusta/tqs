@@ -1,10 +1,10 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
 import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import xtz.tquant.stra.realtime.Config.RTConfig
-import xtz.tquant.stra.utils.JsonHelper
+import Config.RTConfig
+import com.acqusta.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
 import scala.concurrent.Await

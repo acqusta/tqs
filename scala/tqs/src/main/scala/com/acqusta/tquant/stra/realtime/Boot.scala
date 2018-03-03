@@ -1,4 +1,4 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
 import org.apache.commons.cli.{DefaultParser, HelpFormatter, Options}
 

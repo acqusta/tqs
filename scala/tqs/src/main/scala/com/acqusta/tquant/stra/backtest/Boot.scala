@@ -1,4 +1,4 @@
-package xtz.tquant.stra.backtest
+package com.acqusta.tquant.stra.backtest
 
 import org.apache.commons.cli.{DefaultParser, HelpFormatter, Options}
 

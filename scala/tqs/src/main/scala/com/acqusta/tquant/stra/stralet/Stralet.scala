@@ -1,4 +1,4 @@
-package xtz.tquant.stra.stralet
+package com.acqusta.tquant.stra.stralet
 
 import java.time.LocalDateTime
 

@@ -1,15 +1,14 @@
-package xtz.tquant.stra.backtest
+package com.acqusta.tquant.stra.backtest
 
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
+import scala.collection.mutable
 
 import com.acqusta.tquant.api.scala.TradeApi
 import com.acqusta.tquant.api.scala.TradeApi.OrderID
-
-import scala.collection.mutable
-import xtz.tquant.stra.stralet.TqsTradeApi
-import xtz.tquant.stra.stralet.TqsTradeApi.NetPosition
-import xtz.tquant.stra.utils.CsvHelper
+import com.acqusta.tquant.stra.stralet.TqsTradeApi
+import com.acqusta.tquant.stra.stralet.TqsTradeApi.NetPosition
+import com.acqusta.tquant.stra.utils.CsvHelper
 
 object SimAccount {
 

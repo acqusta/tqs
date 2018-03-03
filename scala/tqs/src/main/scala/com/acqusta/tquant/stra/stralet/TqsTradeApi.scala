@@ -1,8 +1,8 @@
-package xtz.tquant.stra.stralet
+package com.acqusta.tquant.stra.stralet
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.acqusta.tquant.api.scala.TradeApi
-import xtz.tquant.stra.stralet.TqsTradeApi.NetPosition
+import com.acqusta.tquant.stra.stralet.TqsTradeApi.NetPosition
 
 
 object TqsTradeApi {

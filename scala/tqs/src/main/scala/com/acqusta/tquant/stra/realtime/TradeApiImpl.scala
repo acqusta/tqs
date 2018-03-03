@@ -1,4 +1,4 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -7,8 +7,8 @@ import akka.actor.ActorRef
 import com.acqusta.tquant.api.TQuantApi
 import com.acqusta.tquant.api.scala.{ScalaTradeApi, TradeApi}
 import com.acqusta.tquant.api.scala.TradeApi._
-import xtz.tquant.stra.stralet.TqsTradeApi
-import xtz.tquant.stra.stralet.TqsTradeApi.NetPosition
+import com.acqusta.tquant.stra.stralet.TqsTradeApi
+import com.acqusta.tquant.stra.stralet.TqsTradeApi.NetPosition
 
 
 class TradeApiImpl(actor : ActorRef, addr : String) extends TqsTradeApi {

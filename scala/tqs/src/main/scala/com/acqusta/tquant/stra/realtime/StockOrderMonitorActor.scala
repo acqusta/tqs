@@ -1,12 +1,12 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.stra.realtime
 
 import java.time.{DayOfWeek, LocalDateTime}
 
 import akka.actor.{Actor, ActorRef}
 import com.acqusta.tquant.api.TQuantApi
 import com.acqusta.tquant.api.scala.{ScalaTradeApi, TradeApi}
-import xtz.tquant.stra.utils.TimeUtils._
-import xtz.tquant.stra.realtime.Config.RTConfig
+import com.acqusta.tquant.stra.utils.TimeUtils._
+import com.acqusta.tquant.stra.realtime.Config.RTConfig
 
 import scala.concurrent.duration.{DurationInt, _}
 import scala.collection.mutable

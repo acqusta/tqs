@@ -1,13 +1,13 @@
-package xtz.tquant.stra.backtest
+package com.acqusta.tquant.stra.backtest
 
 import java.time.LocalDate
 
-import xtz.tquant.stra.backtest.StraletTest._StraletTestConfig
-import xtz.tquant.stra.stralet.Stralet
-import xtz.tquant.stra.utils.JsonHelper
+import com.acqusta.tquant.stra.backtest.StraletTest._StraletTestConfig
+import com.acqusta.tquant.stra.stralet.Stralet
+import com.acqusta.tquant.stra.utils.JsonHelper
 
 import scala.io.Source
-import xtz.tquant.stra.utils.TimeUtils._
+import com.acqusta.tquant.stra.utils.TimeUtils._
 
 
 /**

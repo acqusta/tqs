@@ -1,14 +1,14 @@
-package xtz.tquant.stra.backtest
+package com.acqusta.tquant.stra.backtest
 
 import java.io.File
 import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 
-import xtz.tquant.stra.backtest.StraletTest.{BackTestConfig, _StraletTestConfig}
-import xtz.tquant.stra.stralet.Stralet
-import xtz.tquant.stra.utils.JsonHelper
-import xtz.tquant.stra.utils.TimeUtils._
+import com.acqusta.tquant.stra.backtest.StraletTest.{BackTestConfig, _StraletTestConfig}
+import com.acqusta.tquant.stra.stralet.Stralet
+import com.acqusta.tquant.stra.utils.JsonHelper
+import com.acqusta.tquant.stra.utils.TimeUtils._
 
 import scala.io.Source
 

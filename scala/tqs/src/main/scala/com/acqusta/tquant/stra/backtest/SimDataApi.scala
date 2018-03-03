@@ -1,11 +1,11 @@
-package xtz.tquant.stra.backtest
+package com.acqusta.tquant.stra.backtest
 
 import java.time.{LocalDate, LocalDateTime}
 
 import com.acqusta.tquant.api.TQuantApi
 import com.acqusta.tquant.api.scala.DataApi.DailyBar
 import com.acqusta.tquant.api.scala.{DataApi, ScalaDataApi}
-import xtz.tquant.stra.utils.TimeUtils._
+import com.acqusta.tquant.stra.utils.TimeUtils._
 
 import scala.collection.mutable
 
