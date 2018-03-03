@@ -3,7 +3,8 @@ package xtz.tquant.stra.realtime
 import java.time.{DayOfWeek, LocalDateTime}
 
 import akka.actor.{Actor, ActorRef}
-import xtz.tquant.api.scala.{TQuantApi, TradeApi}
+import com.acqusta.tquant.api.TQuantApi
+import com.acqusta.tquant.api.scala.{ScalaTradeApi, TradeApi}
 import xtz.tquant.stra.utils.TimeUtils._
 import xtz.tquant.stra.realtime.Config.RTConfig
 
@@ -58,7 +59,7 @@ class StockOrderMonitorActor extends Actor{
     def onInit(req : InitReq) = {
         logger.info("Start StockOrderMonitor")
 
-        tapi = new TQuantApi(req.rt_conf.tqc.addr).tradeApi
+        tapi = new ScalaTradeApi(new TQuantApi(req.rt_conf.tqc.addr).getTradeApi)
 
         tapi.setCallback(new TradeApi.Callback {
             override def onOrderTrade(trade: TradeApi.Trade): Unit = {
@@ -88,7 +89,7 @@ class StockOrderMonitorActor extends Actor{
     }
 
     def updateAccountStatus() : Unit = {
-        val (new_accounts, msg) = tapi.queryAccountStatus()
+        val (new_accounts, msg) = tapi.queryAccountStatus
         if (new_accounts == null) return
 
         for ( new_act <- new_accounts if new_act.account_type == "stock" ) {

@@ -1,9 +1,9 @@
 package cta
 
+import com.acqusta.tquant.api.scala.DataApi.{Bar, MarketQuote}
+import com.acqusta.tquant.api.scala.TradeApi.{Order, Trade}
+import com.acqusta.tquant.api.scala.{DataApi, TradeApi}
 import com.tictactec.ta.lib.MInteger
-import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
-import xtz.tquant.api.scala.TradeApi.{Order, Trade}
-import xtz.tquant.api.scala.{DataApi, TradeApi}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
 import xtz.tquant.stra.utils.CsvHelper
 
@@ -75,7 +75,7 @@ class LongShortMAStralet extends Stralet {
     override def onFini() = {
         sc.log("onFini", sc.getTime)
 
-        val (cur_pos, _) = trade_api.queryPosition(this.account)
+        val (cur_pos, _) = trade_api.queryPositions(this.account)
         val (long_size, short_size) = cur_pos.foldLeft( (0L, 0L) ) { (v, x) =>
             if (x.side == "Long")
                 ( v._1 + x.current_size, v._2)
@@ -109,7 +109,7 @@ class LongShortMAStralet extends Stralet {
 
         val unfinished_orders = orders.filter( x => x.code == this.contract && !isFinished(x) )
         for ( ord <- unfinished_orders) {
-            sc.getTradeApi.cancelOrder(this.account, code = this.contract, entrust_no = ord.entrust_no, order_id = ord.order_id)
+            sc.getTradeApi.cancelOrder(this.account, code = this.contract, entrust_no = ord.entrust_no)
         }
     }
 
@@ -148,7 +148,7 @@ class LongShortMAStralet extends Stralet {
         val ma_short = ma(close_prices, 5)
         val ma_long  = ma(close_prices, 30)
 
-        val cur_pos = trade_api.queryPosition(this.account)._1.filter( _.code == this.contract)
+        val cur_pos = trade_api.queryPositions(this.account)._1.filter( _.code == this.contract)
         val (long_size, short_size) = cur_pos.foldLeft( (0L, 0L) ) { (v, x) =>
             if (x.side == "Long")
                 (v._1 + x.current_size, v._2)

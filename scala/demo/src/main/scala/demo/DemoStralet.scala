@@ -1,9 +1,9 @@
 package demo
 
+import com.acqusta.tquant.api.scala.DataApi.{Bar, MarketQuote}
+import com.acqusta.tquant.api.scala.TradeApi.{Order, Trade}
+import com.acqusta.tquant.api.scala.{DataApi, TradeApi}
 import com.tictactec.ta.lib.MInteger
-import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
-import xtz.tquant.api.scala.TradeApi.{Order, Trade}
-import xtz.tquant.api.scala.{DataApi, TradeApi}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
 
 class DemoStralet extends Stralet {
@@ -28,7 +28,7 @@ class DemoStralet extends Stralet {
         universe = sc.getParameters[Seq[String]]("universe",Seq[String]())
         data_api.subscribe( universe )
 
-        val (positions, _) = trade_api.queryPosition(this.stk_account)
+        val (positions, _) = trade_api.queryPositions(this.stk_account)
         val (balance, _) = trade_api.queryBalance(this.stk_account)
 
     }
@@ -36,7 +36,7 @@ class DemoStralet extends Stralet {
     override def onFini() = {
         sc.log("DemoStralet onFini", sc.getTime)
 
-        val (positions, _) = trade_api.queryPosition(this.stk_account)
+        val (positions, _) = trade_api.queryPositions(this.stk_account)
         val (balance, _) = trade_api.queryBalance(this.stk_account)
     }
 
@@ -80,7 +80,7 @@ class DemoStralet extends Stralet {
         // MA60 < MA5 SELL
         if (bars.isEmpty || bars.size < 60) return
 
-        val (tmp_positions, _) = trade_api.queryPosition(this.stk_account)
+        val (tmp_positions, _) = trade_api.queryPositions(this.stk_account)
         val (balance, _) = trade_api.queryBalance(this.stk_account)
 
         val positions = tmp_positions.map ( x => x.code -> x).toMap

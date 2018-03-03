@@ -37,7 +37,7 @@ object StraletTest {
         addr  : String
     )
 
-    case class BastTestOption(
+    case class BackTestOption(
          date_range  : Seq[Int],
          accounts    : Seq[String],
          data_level  : String
@@ -45,7 +45,7 @@ object StraletTest {
     )
     case class BackTestConfig(
         tqc         : TqcConfig,
-        backtest    : BastTestOption
+        backtest    : BackTestOption
      )
 
     def parseTestConfig( text : String) : BackTestConfig = {

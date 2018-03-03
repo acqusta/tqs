@@ -1,10 +1,10 @@
 package xtz.tquant.stra.backtest
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-import xtz.tquant.api.scala.{DataApi, TradeApi}
-import xtz.tquant.stra.stralet.{Stralet, StraletContext}
+import com.acqusta.tquant.api.scala.DataApi
+import xtz.tquant.stra.stralet.{Stralet, StraletContext, TqsTradeApi}
 import xtz.tquant.stra.utils.TimeUtils._
 
 import scala.collection.mutable
@@ -51,7 +51,7 @@ class SimStraletContext(st: StraletTest, var trading_day: Int, var sim_time: Loc
         }
     }
 
-    override def getTradeApi : TradeApi = st.tapi
+    override def getTradeApi : TqsTradeApi = st.tapi
 
     override def getDataApi : DataApi = st.dapi
 

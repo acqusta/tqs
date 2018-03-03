@@ -2,24 +2,26 @@ package xtz.tquant.stra.backtest
 
 import java.time.{LocalDate, LocalDateTime}
 
-import xtz.tquant.api.scala.{DataApi, TQuantApi}
-import xtz.tquant.api.scala.DataApi.MarketQuote
+import com.acqusta.tquant.api.TQuantApi
+import com.acqusta.tquant.api.scala.DataApi.DailyBar
+import com.acqusta.tquant.api.scala.{DataApi, ScalaDataApi}
 import xtz.tquant.stra.utils.TimeUtils._
 
 import scala.collection.mutable
 
 class SimDataApi(st: StraletTest) extends DataApi {
 
-    val _dapi = new TQuantApi(st.container.conf.tqc.addr).dataApi
+    private val _dapi = new ScalaDataApi(new TQuantApi(st.container.conf.tqc.addr).getDataApi(""))
 
-    var _calendar : Set[LocalDate] = _
+    private var _calendar : Set[LocalDate] = _
 
     def calendar : Set[LocalDate] = _calendar
 
     val subed_codes = mutable.HashSet[String]()
 
-    var today_bars  = mutable.HashMap[String,  BarInfo]()
-    var today_ticks = mutable.HashMap[String, TickInfo]()
+    private var today_dailybars  = mutable.HashMap[String,  DailyBarInfo]()
+    private var today_bars  = mutable.HashMap[String,  BarInfo]()
+    private var today_ticks = mutable.HashMap[String, TickInfo]()
 
 
     def init(): Unit = {
@@ -28,13 +30,19 @@ class SimDataApi(st: StraletTest) extends DataApi {
 
     private def loadCalendar()  = {
         // Build calendar using 000001.SH day lines
-        val (bars, msg) = _dapi.bar("000001.SH", "1d")
+        val (bars, msg) = _dapi.dailyBar("000001.SH", "", true)
         assert(bars!=null && bars.nonEmpty, msg)
         _calendar = bars.map( _.date.toLocalDate).toSet
     }
 
-    private def loadBar(code : String, cycle : String, trading_day: Int, price_adj: String, align : Boolean) : Seq[DataApi.Bar] = {
-        val (bars, msg) = _dapi.bar(code, cycle, trading_day=trading_day, price_adj=price_adj, align=align)
+    private def loadBar(code : String, cycle : String, trading_day: Int, align : Boolean) : Seq[DataApi.Bar] = {
+        val (bars, msg) = _dapi.bar(code, cycle, trading_day=trading_day, align=align)
+        assert(bars!=null, s"$code bar error:" + msg)
+        bars
+    }
+
+    private def loadDailyBar(code : String, price_adj: String, align : Boolean) : Seq[DataApi.DailyBar] = {
+        val (bars, msg) = _dapi.dailyBar(code, price_adj, align=align)
         assert(bars!=null, s"$code bar error:" + msg)
         bars
     }
@@ -48,6 +56,8 @@ class SimDataApi(st: StraletTest) extends DataApi {
     case class TickInfo ( ticks : Seq[DataApi.MarketQuote], var pos : Int = -1)
 
     case class BarInfo ( bars : Seq[DataApi.Bar], var pos : Int = -1)
+
+    case class DailyBarInfo ( bars : Seq[DataApi.DailyBar], var pos : Int = -1)
 
     def moveTo(day: LocalDate) : Boolean = {
 
@@ -203,7 +213,7 @@ class SimDataApi(st: StraletTest) extends DataApi {
       * @param trading_day
       * @return
       */
-    override def bar(code: String, cycle: String, trading_day: Int, price_adj: String, align : Boolean): (Seq[DataApi.Bar], String) = {
+    override def bar(code: String, cycle: String, trading_day: Int, align : Boolean): (Seq[DataApi.Bar], String) = {
 
         if (st.cfg.data_level != cycle) {
             val cycle_ok =
@@ -235,8 +245,8 @@ class SimDataApi(st: StraletTest) extends DataApi {
                     (null, s"-1, no bar data: $code $date $time")
                 }
             }
-        } else {
-            val bars = loadBar(code, cycle, if (trading_day == 0) date else trading_day, price_adj, align)
+        } else if (st.cfg.data_level == "1m" || st.cfg.data_level == "tk" ) {
+            val bars = loadBar(code, cycle, if (trading_day == 0) date else trading_day, align)
 
             // 只能取得“今日”之前的日线数据
             if (cycle == "1d") {
@@ -247,6 +257,11 @@ class SimDataApi(st: StraletTest) extends DataApi {
                 else
                     (bars.filter( x => x.date < date || (x.date == date &&x.time <= time)), null)
             }
+        } else if (st.cfg.data_level == "1d") {
+            // 如果是日线回测，不支持bar函数
+            (null, "backtest on daily data doesn't support bar method")
+        } else {
+            (null, s"unknown bar cycle $cycle")
         }
     }
 
@@ -273,19 +288,25 @@ class SimDataApi(st: StraletTest) extends DataApi {
             val (date, time) = st.curSimContext.getTimeAsInt
 
             val last = bi.bars(bi.pos+1).open
+            val q = new DataApi.MarketQuote
+            q.code = code
+            q.date = date
+            q.time = time
+            q.trading_day = st.curSimContext.getTradingDay
+            q.last = last
 
-            val q = DataApi.MarketQuote(code, date, time, st.curSimContext.getTradingDay,
-                0.0, 0.0, 0.0, 0.0, // fixme, OHLC
-                last,
-                0.0, 0.0,
-                0.0, // pre_close
-                0, 0.0, // volume, turnover
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0.0, 0.0,
-                0, 0) // oi
+//            val q = DataApi.MarketQuote(code, date, time, st.curSimContext.getTradingDay,
+//                0.0, 0.0, 0.0, 0.0, // fixme, OHLC
+//                last,
+//                0.0, 0.0,
+//                0.0, // pre_close
+//                0, 0.0, // volume, turnover
+//                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+//                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+//                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+//                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+//                0.0, 0.0,
+//                0, 0) // oi
 
             (q, "0,quote from bar1d!")
         } else {
@@ -299,7 +320,7 @@ class SimDataApi(st: StraletTest) extends DataApi {
         }
     }
 
-    override def tick(code: String, trading_day: Int): (Seq[MarketQuote], String)  = {
+    override def tick(code: String, trading_day: Int): (Seq[DataApi.MarketQuote], String)  = {
         //(null, "-1,fix me")
         val ti = today_ticks.getOrElse(code, null)
         if (ti == null) return (null, "-1,no tick data")
@@ -328,9 +349,11 @@ class SimDataApi(st: StraletTest) extends DataApi {
                 case _     => ""
             }
 
-        today_bars ++= subed_codes.diff(today_bars.keys.toSet)
+        //price_adj = "forward"
+        if (cycle == "1m")
+            today_bars ++= subed_codes.diff(today_bars.keys.toSet)
                             .map{ code =>
-                                val bars = this.loadBar(code, cycle, this.st.curSimContext.getTradingDay, price_adj = "forward", align = true)
+                                val bars = this.loadBar(code, cycle, this.st.curSimContext.getTradingDay, align = true)
                                 var pos = bars.length
                                 for ( i  <- bars.indices if pos == bars.length) {
                                     if ( lastBartime(bars(i).date, bars(i).time) > cur_bar_time) pos = i
@@ -360,5 +383,10 @@ class SimDataApi(st: StraletTest) extends DataApi {
 
     override def setCallback(callback : DataApi.Callback) : Unit = {
         // TODO: implement it in Stralet?
+    }
+
+    override def dailyBar(code: String, price_adj: String, align: Boolean): (Seq[DailyBar], String) = {
+        // 只能去当前交易日之前的，如何处理复权方式？
+        (null, "dailyBar is to be implemented")
     }
 }

@@ -3,9 +3,12 @@ package xtz.tquant.stra.backtest
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 
+import com.acqusta.tquant.api.scala.TradeApi
+import com.acqusta.tquant.api.scala.TradeApi.OrderID
+
 import scala.collection.mutable
-import xtz.tquant.api.scala.TradeApi
-import xtz.tquant.api.scala.TradeApi.{Callback, OrderID, OrderStatus}
+import xtz.tquant.stra.stralet.TqsTradeApi
+import xtz.tquant.stra.stralet.TqsTradeApi.NetPosition
 import xtz.tquant.stra.utils.CsvHelper
 
 object SimAccount {
@@ -32,10 +35,10 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
     var cur_data : TradeData = _
     var his_data = mutable.ListBuffer[TradeData]()
 
-    var status_ind = mutable.ListBuffer[TradeApi.Order]()
-    var trade_ind  = mutable.ListBuffer[TradeApi.Trade]()
+    private var status_ind = mutable.ListBuffer[TradeApi.Order]()
+    private var trade_ind  = mutable.ListBuffer[TradeApi.Trade]()
 
-    def getInd() : (Seq[TradeApi.Order], Seq[TradeApi.Trade]) = {
+    def getInd : (Seq[TradeApi.Order], Seq[TradeApi.Trade]) = {
         val ret = (status_ind, trade_ind)
         status_ind = mutable.ListBuffer[TradeApi.Order]()
         trade_ind  = mutable.ListBuffer[TradeApi.Trade]()
@@ -60,26 +63,17 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
             data.balance.enable_balance =  cur_data.balance.enable_balance
 
             for( (code, pos) <- cur_data.positions if pos.current_size !=0) {
-                data.positions +=
-                    code ->
-                        TradeApi.Position(
-                            account_id   = pos.account_id,
-                            code         = pos.code,
-                            name         = pos.name,
-                            current_size = pos.current_size,
-                            enable_size  = pos.current_size,
-                            init_size    = pos.current_size,
-                            today_size   = 0,
-                            frozen_size  = 0,
-                            side         = pos.side,
-                            cost         = pos.cost,
-                            cost_price   = pos.cost_price,
-                            last_price   = 0.0,
-                            float_pnl    = 0.0,
-                            close_pnl    = 0.0,
-                            margin       = 0.0,
-                            commission   = 0.0
-                        )
+                val new_pos = new TradeApi.Position
+                new_pos.account_id   = pos.account_id
+                new_pos.code         = pos.code
+                new_pos.name         = pos.name
+                new_pos.current_size = pos.current_size
+                new_pos.enable_size  = pos.current_size
+                new_pos.init_size    = pos.current_size
+                new_pos.side         = pos.side
+                new_pos.cost         = pos.cost
+                new_pos.cost_price   = pos.cost_price
+                data.positions += code -> new_pos
             }
 
             his_data += cur_data
@@ -92,14 +86,14 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
     }
 
     def queryBalance() : (TradeApi.Balance, String) = {
-
-        val bal = TradeApi.Balance(account_id = account_id,
-                    fund_account = account_id,
-                    init_balance = cur_data.balance.init_balance,
-                    enable_balance = cur_data.balance.enable_balance,
-                    margin      = 0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0)
+        val bal = new TradeApi.Balance
+        bal.account_id = account_id
+        bal.fund_account = account_id
+        bal.init_balance = cur_data.balance.init_balance
+        bal.enable_balance = cur_data.balance.enable_balance
+        bal.margin      = 0.0
+        bal.float_pnl   = 0.0
+        bal.close_pnl   = 0.0
         (bal, "")
     }
 
@@ -133,41 +127,34 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
             cur_data.balance.enable_balance -= cost
             val pos = cur_data.positions.getOrElse( (code, "Long"), null)
             if (pos == null) {
-                cur_data.positions += (code, "Long") -> TradeApi.Position(
-                    account_id  = account_id,
-                    code        = code,
-                    name        = code,
-                    current_size = size,
-                    enable_size = if (isFuture(code)) size else 0,
-                    init_size   = 0,
-                    frozen_size = 0,
-                    today_size  = size,
-                    side        = "Long",
-                    cost        = cost,
-                    cost_price  = price,
-                    last_price  =  0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0,
-                    margin      = 0.0,
-                    commission  = 0.0)
+
+                var pos = new TradeApi.Position
+                pos.account_id  = account_id
+                pos.code        = code
+                pos.name        = code
+                pos.current_size = size
+                pos.enable_size = if (isFuture(code)) size else 0
+                pos.today_size  = size
+                pos.side        = "Long"
+                pos.cost        = cost
+                pos.cost_price  = price
+
+                cur_data.positions += (code, "Long") -> pos
             } else {
-                    cur_data.positions += (code, "Long") -> TradeApi.Position (
-                    account_id  = pos.account_id,
-                    code        = pos.code,
-                    name        = pos.name,
-                    current_size = pos.current_size + size,
-                    enable_size = pos.enable_size + (if (isFuture(code)) size else 0),
-                    init_size   = 0,
-                    frozen_size = 0,
-                    today_size  = pos.today_size + size,
-                    side        = pos.side,
-                    cost        = pos.cost + cost,
-                    cost_price  = (pos.cost + cost) / pos.current_size,
-                    last_price  = 0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0,
-                    commission  = 0.0,
-                    margin      = 0.0 )
+                val pos = new TradeApi.Position
+
+                pos.account_id  = pos.account_id
+                pos.code        = pos.code
+                pos.name        = pos.name
+                pos.current_size = pos.current_size + size
+                pos.enable_size = pos.enable_size + (if (isFuture(code)) size else 0)
+                pos.init_size   = 0
+                pos.frozen_size = 0
+                pos.today_size  = pos.today_size + size
+                pos.side        = pos.side
+                pos.cost        = pos.cost + cost
+                pos.cost_price  = (pos.cost + cost) / pos.current_size
+                cur_data.positions += (code, "Long") -> pos
             }
             ("Filled", "")
         } else {
@@ -220,46 +207,36 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                 }
 
                 val cost = cur_price * size
-                cur_data.positions += (code, "Long") -> TradeApi.Position (
-                    account_id  = pos.account_id,
-                    code        = pos.code,
-                    name        = pos.name,
-                    current_size = pos.current_size - size,
-                    enable_size = pos.enable_size - size,
-                    init_size   = pos.init_size,
-                    frozen_size = 0,
-                    today_size  = today_size,
-                    side        = pos.side,
-                    cost        = pos.cost - cost,
-                    cost_price  = pos.cost_price,
-                    last_price  = 0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0,
-                    commission  = 0.0,
-                    margin      = 0.0 )
+                val new_pos = new TradeApi.Position
+                new_pos.account_id  = pos.account_id
+                new_pos.code        = pos.code
+                new_pos.name        = pos.name
+                new_pos.current_size = pos.current_size - size
+                new_pos.enable_size = pos.enable_size - size
+                new_pos.init_size   = pos.init_size
+                new_pos.today_size  = today_size
+                new_pos.side        = pos.side
+                new_pos.cost        = pos.cost - cost
+                new_pos.cost_price  = pos.cost_price
 
+                cur_data.positions += (code, "Long") -> new_pos
                 cur_data.balance.enable_balance += cost
                 ("Filled", "")
             } else {
                 val cost = cur_price * size
-                cur_data.positions += (code, "Long") -> TradeApi.Position (
-                    account_id  = pos.account_id,
-                    code        = pos.code,
-                    name        = pos.name,
-                    current_size = pos.current_size - size,
-                    enable_size = pos.enable_size - size,
-                    init_size   = pos.init_size,
-                    frozen_size = 0,
-                    today_size  = pos.today_size,
-                    side        = pos.side,
-                    cost        = pos.cost - cost,
-                    cost_price  = pos.cost_price,
-                    last_price  = 0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0,
-                    commission  = 0.0,
-                    margin      = 0.0 )
+                val new_pos = new TradeApi.Position
+                new_pos.account_id  = pos.account_id
+                new_pos.code        = pos.code
+                new_pos.name        = pos.name
+                new_pos.current_size = pos.current_size - size
+                new_pos.enable_size = pos.enable_size - size
+                new_pos.init_size   = pos.init_size
+                new_pos.today_size  = pos.today_size
+                new_pos.side        = pos.side
+                new_pos.cost        = pos.cost - cost
+                new_pos.cost_price  = pos.cost_price
 
+                cur_data.positions += (code, "Long") -> new_pos
                 cur_data.balance.enable_balance += cost
                 ("Filled", "")
             }
@@ -293,42 +270,32 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
             cur_data.balance.enable_balance -= cost
             val pos = cur_data.positions.getOrElse( (code, "Short"), null)
             if (pos == null) {
-                cur_data.positions += (code, "Short") -> TradeApi.Position(
-                    account_id  = account_id,
-                    code        = code,
-                    name        = code,
-                    current_size = size,
-                    enable_size = size,
-                    init_size   = 0,
-                    frozen_size = 0,
-                    today_size  = size,
-                    side        = "Short",
-                    cost        = cost,
-                    cost_price  = price,
-                    last_price  =  0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0,
-                    commission  = 0.0,
-                    margin      = 0.0 )
-
+                val new_pos = new TradeApi.Position
+                new_pos.account_id  = account_id
+                new_pos.code        = code
+                new_pos.name        = code
+                new_pos.current_size = size
+                new_pos.enable_size = size
+                new_pos.init_size   = 0
+                new_pos.frozen_size = 0
+                new_pos.today_size  = size
+                new_pos.side        = "Short"
+                new_pos.cost        = cost
+                new_pos.cost_price  = price
+                cur_data.positions += (code, "Short") -> new_pos
             } else {
-                cur_data.positions += (code, "Short") -> TradeApi.Position (
-                    account_id  = pos.account_id,
-                    code        = pos.code,
-                    name        = pos.name,
-                    current_size = pos.current_size + size,
-                    enable_size = pos.enable_size + size,
-                    init_size   = pos.init_size,
-                    frozen_size = 0,
-                    today_size  = pos.today_size + size,
-                    side        = pos.side,
-                    cost        = pos.cost + cost,
-                    cost_price  = (pos.cost + cost) / pos.current_size,
-                    last_price  =  0.0,
-                    float_pnl   = 0.0,
-                    close_pnl   = 0.0,
-                    commission  = 0.0,
-                    margin      = 0.0 )
+                val new_pos = new TradeApi.Position
+                new_pos.account_id  = pos.account_id
+                new_pos.code        = pos.code
+                new_pos.name        = pos.name
+                new_pos.current_size = pos.current_size + size
+                new_pos.enable_size = pos.enable_size + size
+                new_pos.init_size   = pos.init_size
+                new_pos.today_size  = pos.today_size + size
+                new_pos.side        = pos.side
+                new_pos.cost        = pos.cost + cost
+                new_pos.cost_price  = (pos.cost + cost) / pos.current_size
+                cur_data.positions += (code, "Short") -> new_pos
             }
             ("Filled", "")
         } else {
@@ -374,23 +341,20 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
 
         if (pos != null && pos.enable_size >= size) {
             val cost = cur_price * size
-            cur_data.positions += (code, "Short") -> TradeApi.Position (
-                account_id  = pos.account_id,
-                code        = pos.code,
-                name        = pos.name,
-                current_size = pos.current_size - size,
-                enable_size = pos.enable_size - size,
-                init_size   = pos.init_size,
-                frozen_size = 0,
-                today_size  = if (isCoverToday) pos.today_size - size else pos.today_size,
-                side        = pos.side,
-                cost        = pos.cost - cost,
-                cost_price  = pos.cost_price,
-                last_price  =  0.0,
-                float_pnl   = 0.0,
-                close_pnl   = 0.0,
-                commission  = 0.0,
-                margin      = 0.0 )
+            val new_pos = new TradeApi.Position
+
+            new_pos.account_id  = pos.account_id
+            new_pos.code        = pos.code
+            new_pos.name        = pos.name
+            new_pos.current_size = pos.current_size - size
+            new_pos.enable_size = pos.enable_size - size
+            new_pos.init_size   = pos.init_size
+            new_pos.today_size  = if (isCoverToday) pos.today_size - size else pos.today_size
+            new_pos.side        = pos.side
+            new_pos.cost        = pos.cost - cost
+            new_pos.cost_price  = pos.cost_price
+
+            cur_data.positions += (code, "Short") -> new_pos
             cur_data.balance.enable_balance += cost
             ("Filled", "")
         } else {
@@ -453,36 +417,34 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
             fill_price = q.last
             fill_size  = order.entrust_size
 
-            trade = TradeApi.Trade(
-                account_id = account_id,
-                code       = order.code,
-                name       = order.name,
-                entrust_no = order.entrust_no,
-                entrust_action = order.entrust_action,
-                fill_no        = order.entrust_no + "-trade",
-                fill_size      = fill_size,
-                fill_price     = fill_price,
-                fill_date      = sim.getSimTime._1,
-                fill_time      = sim.getSimTime._2
-            )
+            trade = new TradeApi.Trade
+            trade.account_id = account_id
+            trade.code       = order.code
+            trade.name       = order.name
+            trade.entrust_no = order.entrust_no
+            trade.entrust_action = order.entrust_action
+            trade.fill_no        = order.entrust_no + "-trade"
+            trade.fill_size      = fill_size
+            trade.fill_price     = fill_price
+            trade.fill_date      = sim.getSimTime._1
+            trade.fill_time      = sim.getSimTime._2
         }
 
-        val new_order = TradeApi.Order(
-                account_id     = order.account_id    ,
-                code           = order.code          ,
-                name           = order.name          ,
-                entrust_no     = order.entrust_no    ,
-                entrust_action = order.entrust_action,
-                entrust_price  = order.entrust_price ,
-                entrust_size   = order.entrust_size  ,
-                entrust_date   = order.entrust_date  ,
-                entrust_time   = order.entrust_time  ,
-                fill_price     = fill_price    ,
-                fill_size      = fill_size     ,
-                status         = status,
-                status_msg     = msg,
-                order_id       = order.order_id
-            )
+        val new_order = new TradeApi.Order
+        new_order.account_id     = order.account_id
+        new_order.code           = order.code
+        new_order.name           = order.name
+        new_order.entrust_no     = order.entrust_no
+        new_order.entrust_action = order.entrust_action
+        new_order.entrust_price  = order.entrust_price
+        new_order.entrust_size   = order.entrust_size
+        new_order.entrust_date   = order.entrust_date
+        new_order.entrust_time   = order.entrust_time
+        new_order.fill_price     = fill_price
+        new_order.fill_size      = fill_size
+        new_order.status         = status
+        new_order.status_msg     = msg
+        new_order.order_id       = order.order_id
         (new_order, trade)
     }
 
@@ -490,24 +452,24 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
 
         for ( i <- this.cur_data.orders.indices) {
             var ord = this.cur_data.orders(i)
-            if (!isFinished((ord.status))){
+            if (!isFinished(ord.status)){
                 if (ord.status == "New") {
-                    val tmp = TradeApi.Order(
-                        account_id     = ord.account_id    ,
-                        code           = ord.code          ,
-                        name           = ord.name          ,
-                        entrust_no     = ord.entrust_no    ,
-                        entrust_action = ord.entrust_action,
-                        entrust_price  = ord.entrust_price ,
-                        entrust_size   = ord.entrust_size  ,
-                        entrust_date   = ord.entrust_date  ,
-                        entrust_time   = ord.entrust_time  ,
-                        fill_price     = ord.fill_price    ,
-                        fill_size      = ord.fill_size     ,
-                        status         = "Accepted"        ,
-                        status_msg     = ""                ,
-                        order_id       = ord.order_id
-                    )
+                    val tmp = new TradeApi.Order
+                    tmp.account_id     = ord.account_id
+                    tmp.code           = ord.code
+                    tmp.name           = ord.name
+                    tmp.entrust_no     = ord.entrust_no
+                    tmp.entrust_action = ord.entrust_action
+                    tmp.entrust_price  = ord.entrust_price
+                    tmp.entrust_size   = ord.entrust_size
+                    tmp.entrust_date   = ord.entrust_date
+                    tmp.entrust_time   = ord.entrust_time
+                    tmp.fill_price     = ord.fill_price
+                    tmp.fill_size      = ord.fill_size
+                    tmp.status         = "Accepted"
+                    tmp.status_msg     = ""
+                    tmp.order_id       = ord.order_id
+
                     status_ind += tmp
                     cur_data.orders(i) = tmp
                     ord = tmp
@@ -539,23 +501,22 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
 
         val (date, time) = sim.getSimTime
 
-        cur_data.orders += TradeApi.Order(
-            account_id     = account_id,
-            code           = code,
-            name           = code,
-            entrust_no     = entrust_no,
-            entrust_action = action,
-            entrust_price  = price,
-            entrust_size   = size,
-            entrust_date   = date,
-            entrust_time   = time,
-            fill_price     = 0.0,
-            fill_size      = 0L,
-            status         = "New",
-            status_msg     = "",
-            order_id       = cur_data.cur_entrust_no
-        )
-
+        val order = new TradeApi.Order
+        order.account_id     = account_id
+        order.code           = code
+        order.name           = code
+        order.entrust_no     = entrust_no
+        order.entrust_action = action
+        order.entrust_price  = price
+        order.entrust_size   = size
+        order.entrust_date   = date
+        order.entrust_time   = time
+        order.fill_price     = 0.0
+        order.fill_size      = 0L
+        order.status         = "New"
+        order.status_msg     = ""
+        order.order_id       = cur_data.cur_entrust_no
+        cur_data.orders += order
         (entrust_no, cur_data.cur_entrust_no)
     }
 
@@ -596,7 +557,10 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
 
         this.sim.log(f"place order: $date $time $code $price%.3f $size $action, $entrust_no, $order_id")
 
-        (OrderID(entrust_no, order_id), "")
+        val oid = new OrderID
+        oid.entrust_no = entrust_no
+        oid.order_id = order_id
+        (oid, "")
     }
 
     def cancelOrder(code : String, entrust_no : String) : (Boolean, String) = {
@@ -611,22 +575,22 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
             if (isFinished(order.status))
                 (true, "already filled")
             else {
-                val new_order = TradeApi.Order(
-                    account_id     = order.account_id    ,
-                    code           = order.code          ,
-                    name           = order.name          ,
-                    entrust_no     = order.entrust_no    ,
-                    entrust_action = order.entrust_action,
-                    entrust_price  = order.entrust_price ,
-                    entrust_size   = order.entrust_size  ,
-                    entrust_date   = order.entrust_date  ,
-                    entrust_time   = order.entrust_time  ,
-                    fill_price     = order.fill_price    ,
-                    fill_size      = order.fill_size     ,
-                    status         = "Cancelled",
-                    status_msg     = "",
-                    order_id       = order.order_id
-                )
+                val new_order = new TradeApi.Order
+                new_order.account_id     = order.account_id
+                new_order.code           = order.code
+                new_order.name           = order.name
+                new_order.entrust_no     = order.entrust_no
+                new_order.entrust_action = order.entrust_action
+                new_order.entrust_price  = order.entrust_price
+                new_order.entrust_size   = order.entrust_size
+                new_order.entrust_date   = order.entrust_date
+                new_order.entrust_time   = order.entrust_time
+                new_order.fill_price     = order.fill_price
+                new_order.fill_size      = order.fill_size
+                new_order.status         = "Cancelled"
+                new_order.status_msg     = ""
+                new_order.order_id       = order.order_id
+
                 cur_data.orders(idx) = new_order
                 status_ind += new_order
                 (true, "cancelled")
@@ -635,7 +599,7 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
     }
 }
 
-class SimTradeApi(_st: StraletTest) extends TradeApi {
+class SimTradeApi(_st: StraletTest) extends TqsTradeApi {
 
     def log(data: Any) : Unit = _st.curSimContext.log(data)
 
@@ -648,9 +612,9 @@ class SimTradeApi(_st: StraletTest) extends TradeApi {
 
     def getSimTime: (Int, Int) = _st.curSimContext.getTimeAsInt
 
-    def st = _st
+    def st : StraletTest = _st
 
-    def moveTo(next_tradingday: LocalDate) = {
+    def moveTo(next_tradingday: LocalDate) : Unit = {
         accounts.foreach(_._2.moveTo(next_tradingday))
     }
 
@@ -659,15 +623,22 @@ class SimTradeApi(_st: StraletTest) extends TradeApi {
     }
 
     def getInd : (Seq[TradeApi.Order], Seq[TradeApi.Trade]) = {
-        accounts.map( _._2.getInd())
+        accounts.map( _._2.getInd)
                 .foldLeft( (Seq[TradeApi.Order] (), Seq[TradeApi.Trade]() ) ) {
                     (x, i) => (x._1 ++ i._1, x._2 ++ i._2)
                 }
     }
 
     override
-    def queryAccountStatus() : (Seq[TradeApi.AccountInfo], String) = {
-        val status = accounts.map{ case (k, v) => TradeApi.AccountInfo(k, "sim", k, "Connected", "", "sim") }
+    def queryAccountStatus : (Seq[TradeApi.AccountInfo], String) = {
+        val status = accounts.map{ case (k, v) =>
+            val act = new TradeApi.AccountInfo
+            act.account_id = k
+            act.broker = "sim"
+            act.account_id = k
+            act.status = "Connected"
+            act.account_type = "sim"
+            act }
         (status.toSeq, "")
     }
 
@@ -699,7 +670,7 @@ class SimTradeApi(_st: StraletTest) extends TradeApi {
     }
 
     override
-    def queryPosition(account_id : String) : (Seq[TradeApi.Position], String) = {
+    def queryPositions(account_id : String) : (Seq[TradeApi.Position], String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
             act.queryPosition()
@@ -717,7 +688,7 @@ class SimTradeApi(_st: StraletTest) extends TradeApi {
     }
 
     override
-    def cancelOrder(account_id : String, code : String, entrust_no : String, order_id : Int) : (Boolean, String) = {
+    def cancelOrder(account_id : String, code : String, entrust_no : String) : (Boolean, String) = {
         val act = accounts.getOrElse(account_id, null)
         if (act != null)
             act.cancelOrder(code, entrust_no)
@@ -725,8 +696,26 @@ class SimTradeApi(_st: StraletTest) extends TradeApi {
             (false, "unkown account")
     }
 
+    override
+    def cancelOrder(account_id : String, code : String, order_id : Int) : (Boolean, String) = {
+//        val act = accounts.getOrElse(account_id, null)
+//        if (act != null)
+//            act.cancelOrder(code, order_id)
+//        else
+//            (false, "unkown account")
+        (false, "unsupported method: cancelOrder by order_id")
+    }
 
-    override def setCallback(callback: Callback): Unit = {
+    override
+    def cancelOrder(account_id : String, code : String, entrust_no : String, order_id : Int) : (Boolean, String) = {
+        if (entrust_no == null || entrust_no.isEmpty)
+            (false, "empty entrust_no")
+        else
+            cancelOrder(account_id, code, entrust_no)
+    }
+
+
+    override def setCallback(callback: TradeApi.Callback): Unit = {
 
     }
 
@@ -741,10 +730,28 @@ class SimTradeApi(_st: StraletTest) extends TradeApi {
                     baos.write(bytes, 0, len)
                     len = stream.read(bytes)
                 }
-                (new String(baos.toByteArray(), "utf-8"), "")
+                (new String(baos.toByteArray, "utf-8"), "")
             case _ =>
             (null, "-1,don't support")
         }
+    }
+
+    override def queryNetPosition(account_id: String) : (Seq[NetPosition], String) = {
+        // TODO:
+        assert(false, "to be implemented")
+        null
+    }
+
+    override def placeAutoOrder(account_id: String, code: String, price : Double, size: Long) : (String, String) = {
+        // TODO:
+        assert(false, "to be implemented")
+        null
+    }
+
+    override def cancelAutoOrder(account_id: String, code: String, entrust_no: String) : (Boolean, String) = {
+        // TODO:
+        assert(false, "to be implemented")
+        null
     }
 
     def saveOrder(path: String): Unit = {

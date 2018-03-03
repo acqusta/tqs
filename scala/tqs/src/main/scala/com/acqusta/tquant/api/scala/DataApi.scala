@@ -1,29 +1,45 @@
-package xtz.tquant.stra.realtime
+package com.acqusta.tquant.api.scala
 
 import akka.actor.ActorRef
-import com.acqusta.tquant.api.scala.DataApi
-import com.acqusta.tquant.api.TQuantApi
-import com.acqusta.tquant.api.scala.DataApi.{Bar, Callback, DailyBar, MarketQuote}
+import com.acqusta.tquant.api.{TQuantApi, DataApi => JavaDataApi}
+import xtz.tquant.stra.realtime.StraletActor
 
 import scala.collection.mutable
 
-/**
-  * Created by txu on 2017/9/6.
-  */
-class DataApiImpl (actorRef: ActorRef, tqc_addr : String) extends DataApi {
+object DataApi {
+    type Callback = JavaDataApi.Callback
 
-    val dapi = new TQuantApi(tqc_addr).getDataApi("")
+    type MarketQuote = JavaDataApi.MarketQuote
 
-    dapi.setCallback( new DataApi.Callback {
-        override def onMarketQuote(quote: MarketQuote): Unit = {
-            actorRef ! quote
-        }
+    type Bar = JavaDataApi.Bar
 
-        override def onBar(cycle: String, bar: Bar): Unit = {
-            actorRef ! StraletActor.BarInd(cycle, bar)
-        }
-    })
+    type DailyBar = JavaDataApi.DailyBar
 
+}
+
+trait DataApi {
+
+    import DataApi._
+
+    def tick(code: String, trading_day: Int = 0): (Seq[MarketQuote], String)
+
+    def bar(code: String, cycle: String, trading_day: Int = 0, align: Boolean = true): (Seq[Bar], String)
+
+    def dailyBar(code: String, price_adj: String = "", align: Boolean = true): (Seq[DailyBar], String)
+
+    def quote(code: String): (MarketQuote, String)
+
+    def subscribe(codes: Seq[String]): (Seq[String], String)
+
+    def unsubscribe(codes: Seq[String]): (Seq[String], String)
+
+    def setCallback(callback: Callback): Unit
+}
+
+
+class ScalaDataApi (dapi : JavaDataApi) extends DataApi {
+
+    import DataApi._
 
     override def bar(code: String, cycle: String, trading_day: Int, align: Boolean): (Seq[Bar], String) = {
         val r = dapi.getBar(code, cycle, trading_day, align)

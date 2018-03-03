@@ -4,11 +4,11 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, Cancellable}
-import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
-import xtz.tquant.api.scala.TradeApi.{Order, Trade}
-import xtz.tquant.api.scala.{DataApi, TradeApi}
+import com.acqusta.tquant.api.scala.DataApi
+import com.acqusta.tquant.api.scala.DataApi.{Bar, MarketQuote}
+import com.acqusta.tquant.api.scala.TradeApi.{Order, Trade}
 import xtz.tquant.stra.realtime.Config.RTConfig
-import xtz.tquant.stra.stralet.{Stralet, StraletContext}
+import xtz.tquant.stra.stralet.{Stralet, StraletContext, TqsTradeApi}
 
 import scala.concurrent.duration.{DurationInt, _}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -64,7 +64,7 @@ class StraletActor extends Actor with StraletContext{
         case timer : Timer                            => onTimer(timer)
     }
 
-    def onInitReq(req : InitReq) = {
+    def onInitReq(req : InitReq) :Unit = {
 
         try {
             this.cfg = req.cfg
@@ -165,7 +165,7 @@ class StraletActor extends Actor with StraletContext{
 
     }
 
-    val timer_map = mutable.HashMap[Int, Cancellable]()
+    private val timer_map = mutable.HashMap[Int, Cancellable]()
 
     override def setTimer(id: Int, delay: Int, data: Any) : Unit = {
 
@@ -190,7 +190,7 @@ class StraletActor extends Actor with StraletContext{
         self ! PostEvent(evt, data)
     }
 
-    override def getTradeApi : TradeApi = tapi
+    override def getTradeApi : TqsTradeApi = tapi
 
     override def getDataApi : DataApi = dapi
 

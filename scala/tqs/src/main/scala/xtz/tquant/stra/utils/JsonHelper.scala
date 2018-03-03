@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.{DeserializationFeature, JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import xtz.tquant.api.java.JsonRpc
 
 object JsonHelper {
 
@@ -44,64 +43,64 @@ object JsonHelper {
     }
 
 
-    def erroToString(error: JsonRpc.JsonRpcError) : String = {
-        if (error != null) {
-            if (error.message != null )
-                error.code.toString + "," + error.message
-            else
-                error.code.toString + ","
-        } else {
-            ","
-        }
-    }
-
-    def extractResult[T: Manifest](cr: JsonRpc.JsonRpcCallResult,  errValue: T = null): (T, String) = {
-        try {
-            val value =
-                if (cr.result != null ) {
-                    JsonHelper.convert[T](cr.result)
-                }
-                else
-                    errValue
-
-            val message =
-                if ( cr.error != null )
-                    erroToString(cr.error)
-                else
-                    null
-
-            (value, message)
-
-
-        } catch {
-            case e: Throwable =>
-                e.printStackTrace()
-                (errValue, e.getMessage)
-        }
-    }
-
-    def extractResultMapList(cr: JsonRpc.JsonRpcCallResult): (Map[String, List[_]], String) = {
-        try {
-            val value =
-                if (cr.result != null )
-                    cr.result.asInstanceOf[Map[String, List[_]]]
-                else
-                    null
-
-            val message =
-                if ( cr.error != null )
-                    erroToString(cr.error)
-                else
-                    null
-
-            (value, message)
-
-
-        } catch {
-            case e: Throwable =>
-                e.printStackTrace()
-                (null, e.getMessage)
-        }
-    }
+//    def erroToString(error: JsonRpc.JsonRpcError) : String = {
+//        if (error != null) {
+//            if (error.message != null )
+//                error.code.toString + "," + error.message
+//            else
+//                error.code.toString + ","
+//        } else {
+//            ","
+//        }
+//    }
+//
+//    def extractResult[T: Manifest](cr: JsonRpc.JsonRpcCallResult,  errValue: T = null): (T, String) = {
+//        try {
+//            val value =
+//                if (cr.result != null ) {
+//                    JsonHelper.convert[T](cr.result)
+//                }
+//                else
+//                    errValue
+//
+//            val message =
+//                if ( cr.error != null )
+//                    erroToString(cr.error)
+//                else
+//                    null
+//
+//            (value, message)
+//
+//
+//        } catch {
+//            case e: Throwable =>
+//                e.printStackTrace()
+//                (errValue, e.getMessage)
+//        }
+//    }
+//
+//    def extractResultMapList(cr: JsonRpc.JsonRpcCallResult): (Map[String, List[_]], String) = {
+//        try {
+//            val value =
+//                if (cr.result != null )
+//                    cr.result.asInstanceOf[Map[String, List[_]]]
+//                else
+//                    null
+//
+//            val message =
+//                if ( cr.error != null )
+//                    erroToString(cr.error)
+//                else
+//                    null
+//
+//            (value, message)
+//
+//
+//        } catch {
+//            case e: Throwable =>
+//                e.printStackTrace()
+//                (null, e.getMessage)
+//        }
+//    }
 
 }

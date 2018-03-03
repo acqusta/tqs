@@ -1,10 +1,9 @@
 package cta
 
-import xtz.tquant.api.scala.DataApi.{Bar, MarketQuote}
-import xtz.tquant.api.scala.TradeApi.{Order, Trade}
-import xtz.tquant.api.scala.{DataApi, TradeApi}
+import com.acqusta.tquant.api.scala.DataApi.{Bar, MarketQuote}
+import com.acqusta.tquant.api.scala.TradeApi.{Order, Trade}
+import com.acqusta.tquant.api.scala.{DataApi, TradeApi}
 import xtz.tquant.stra.stralet.{Stralet, StraletContext}
-import xtz.tquant.stra.utils.CsvHelper
 
 import scala.io.Source
 
@@ -102,7 +101,7 @@ class RBreakerStralet extends Stralet {
     override def onFini() = {
         sc.log("onFini", sc.getTime)
 
-        val (cur_pos, _) = trade_api.queryPosition(this.account)
+        val (cur_pos, _) = trade_api.queryPositions(this.account)
         val (long_size, short_size) = cur_pos.foldLeft( (0L, 0L) ) { (v, x) =>
             if (x.side == "Long")
                 ( v._1 + x.current_size, v._2)
@@ -200,7 +199,7 @@ class RBreakerStralet extends Stralet {
         val bar_2 = bars(bars.length-2)
         val bar_1 = bars.last
 
-        val cur_pos = trade_api.queryPosition(this.account)._1.filter( _.code == this.contract)
+        val cur_pos = trade_api.queryPositions(this.account)._1.filter( _.code == this.contract)
         val (long_size, short_size) = cur_pos.foldLeft( (0L, 0L) ) { (v, x) =>
             if (x.side == "Long")
                 ( v._1 + x.current_size, v._2)

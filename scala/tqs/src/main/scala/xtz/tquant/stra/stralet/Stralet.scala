@@ -1,11 +1,8 @@
 package xtz.tquant.stra.stralet
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDateTime
 
-import xtz.tquant.api.scala.DataApi
-import xtz.tquant.api.scala.DataApi.Bar
-import xtz.tquant.api.scala.TradeApi
-
+import com.acqusta.tquant.api.scala.{DataApi, TradeApi}
 
 trait Stralet {
 
@@ -21,7 +18,7 @@ trait Stralet {
 
     def onQuote(q: DataApi.MarketQuote) : Unit = {}
 
-    def onBar(cycle : String, bar: Bar) : Unit = {}
+    def onBar(cycle : String, bar: DataApi.Bar) : Unit = {}
 
     def onTimer(id: Int, data: Any) : Unit = {}
 
@@ -49,7 +46,7 @@ trait StraletContext {
 
     def postEvent(evt: String, data : Any)
 
-    def getTradeApi : TradeApi
+    def getTradeApi : TqsTradeApi
 
     def getDataApi : DataApi
 
