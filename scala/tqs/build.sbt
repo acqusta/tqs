@@ -13,8 +13,6 @@ libraryDependencies += "ch.qos.logback" % "logback-core"    % "1.2.3"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "org.slf4j"      % "slf4j-api"       % "1.7.25"
 
-libraryDependencies += "org.zeromq"                    % "jeromq"               % "0.4.2"
-
 val jacksonVersion = "2.9.1"
 libraryDependencies += "com.fasterxml.jackson.core"       % "jackson-core"              % jacksonVersion
 libraryDependencies += "com.fasterxml.jackson.core"       % "jackson-annotations"       % jacksonVersion

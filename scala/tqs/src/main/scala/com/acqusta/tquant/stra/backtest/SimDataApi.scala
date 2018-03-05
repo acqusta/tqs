@@ -37,7 +37,7 @@ class SimDataApi(st: StraletTest) extends DataApi {
 
     private def loadBar(code : String, cycle : String, trading_day: Int, align : Boolean) : Seq[DataApi.Bar] = {
         val (bars, msg) = _dapi.bar(code, cycle, trading_day=trading_day, align=align)
-        assert(bars!=null, s"$code bar error:" + msg)
+        assert(bars!=null, s"$code $trading_day bar error:" + msg)
         bars
     }
 

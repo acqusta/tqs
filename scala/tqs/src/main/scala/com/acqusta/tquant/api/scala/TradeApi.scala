@@ -95,7 +95,7 @@ class ScalaTradeApi (tapi : JavaTradeApi) extends TradeApi {
         var r : CallResult[java.lang.Boolean] = null
         if (entrust_no!=null && entrust_no.nonEmpty)
             r = tapi.cancelOrder(account_id, code, entrust_no)
-        else if (order_id != null && order_id != 0)
+        else if (order_id != 0)
             r = tapi.cancelOrder(account_id, code, order_id)
 
         if (r != null)

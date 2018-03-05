@@ -2,7 +2,7 @@ package com.acqusta.tquant.api.scala
 
 import akka.actor.ActorRef
 import com.acqusta.tquant.api.{TQuantApi, DataApi => JavaDataApi}
-import xtz.tquant.stra.realtime.StraletActor
+import com.acqusta.tquant.stra.realtime.StraletActor
 
 import scala.collection.mutable
 
