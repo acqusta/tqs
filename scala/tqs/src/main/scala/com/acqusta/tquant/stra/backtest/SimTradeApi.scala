@@ -534,8 +534,8 @@ class SimAccount(sim: SimTradeApi, account_id : String) {
                 }
 
             if (is_future) {
-                (time >= 90000000 && time < 101500000) ||
-                (time >= 1030000 && time < 113000000) ||
+                (time >=  90000000 && time < 101500000) ||
+                (time >= 103000000 && time < 113000000) ||
                 (time > 1300000 && time < 150000000)
             } else {
                 (time >= 93000000 && time<113000000) || (time > 1300000 && time < 150000000)
