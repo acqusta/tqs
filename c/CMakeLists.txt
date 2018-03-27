@@ -7,6 +7,7 @@ option(BUILD_JAVA "Build Java" OFF)
 option(BUILD_PYTHON "Build Python" OFF)
 
 set(CMAKE_INSTALL_PREFIX dist)
+set(BUILD_TQS 1)
 
 include_directories(
   lib/
@@ -67,6 +68,7 @@ else()
 
 endif()
 
+add_subdirectory(deps/tqapi)
 add_subdirectory(lib/msgpack)
 add_subdirectory(lib/myutils)
 add_subdirectory(lib/snappy)
@@ -81,6 +83,5 @@ if (BUILD_PYTHON)
   add_subdirectory(pyext)
 endif()
 
-set (CMAKE_BUILD_CONFIG ${CMAKE_BUILD_TYPE})
-
-install(FILES deps/tqapi/Debug/tqapi.dll DESTINATION bin)
+#set (CMAKE_BUILD_CONFIG ${CMAKE_BUILD_TYPE})
+#install(FILES deps/tqapi/Debug/tqapi.dll DESTINATION bin)
