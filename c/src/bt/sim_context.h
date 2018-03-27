@@ -50,7 +50,8 @@ public:
     virtual DataApi*  data_api(const char* source = nullptr) override;
     virtual TradeApi* trade_api() override;
 
-    virtual void log(const char* text) override;
+    virtual ostream& logger(LogLevel level = LogLevel::INFO) override;
+
     virtual string get_parameter(const char* name, const char* def_value) override;
 
     virtual string mode() override;

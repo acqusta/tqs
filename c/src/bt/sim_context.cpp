@@ -84,9 +84,17 @@ TradeApi* SimStraletContext::trade_api()
     return m_tapi;
 }
 
-void SimStraletContext::log(const char* text)
+ostream& SimStraletContext::logger(LogLevel level)
 {
-    cout << text << endl;
+    static const char* str_lavel[] = {
+        "[I] ",
+        "[W] ",
+        "[E] ",
+        "[F] "
+    };
+
+    cout << str_lavel[level];
+    return cout;
 }
 
 string SimStraletContext::get_parameter(const char* name, const char* def_value)

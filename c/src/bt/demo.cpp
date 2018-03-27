@@ -58,9 +58,9 @@ int test2()
 {
     BackTestConfig cfg;
     //cfg.dapi_addr = "tcp://127.0.0.1:10001";
-    cfg.begin_date = 20180101;
+    cfg.begin_date = 20170101;
     cfg.end_date = 20180321;
-    cfg.data_level = "tk";
+    cfg.data_level = "1m";
     cfg.accounts.push_back(AccountConfig("sim", 1e8));
 
     auto begin_time = system_clock::now();

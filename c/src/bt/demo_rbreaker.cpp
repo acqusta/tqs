@@ -1,5 +1,6 @@
-//#include "backtest.h
 #include <iostream>
+#include <sstream>
+#include <string.h>
 #include "stralet.h"
 
 
@@ -55,7 +56,7 @@ class RBreakerStralet : public Stralet {
     int count_1 = 0;
     int count_2 = 0;
     string account_id = "sim";
-    string contract = "RB.SHF";
+    string contract = "CU.SHF";
 
 public:
     virtual void on_init(StraletContext* sc) override;
@@ -64,46 +65,28 @@ public:
 
     int cancel_unfinished_order();
 
-    void place_order(const string& code, int64_t size, double price, const string action);
+    void place_order(const string& code, double price, int64_t size, const string action);
 };
 
 void RBreakerStralet::on_init(StraletContext* sc)
 {
     Stralet::on_init(sc);
 
-    cout << "on_init: " << sc->trading_day() << endl;
+    sc->logger() << "on_init: " << sc->trading_day() << endl;
     // TODO: 从配置中得到要交易的商品期货，然后从主力合约映射表中得到今日交易的合约
     sc->data_api()->subscribe(vector<string>{contract});
     //sc->data_api()->subscribe(vector<string>{"000001.SH"});
 
-    //data_api.subscribe(Array(contract))
-
-    //val(daily_bar, msg) = data_api.bar(contract, "1d")
-    //assert(daily_bar != null, "can't get bar1d: " + msg)
-    //assert(daily_bar.last.date < sc.getTradingDay)
-
-    //// 从上个交易日价格计算出今天的价格区间
-    //val last_day = daily_bar.last
-    //price_range = calcPriceRange(last_day.high, last_day.low, last_day.close)
-
-    //sc.log(price_range)
+    // TODO: 从上个交易日价格计算出今天的价格区间
 }
 
 void RBreakerStralet::on_fini() 
 {
-    //    sc.log("onFini", sc.getTime)
-
-    //    val(cur_pos, _) = trade_api.queryPositions(this.account)
-    //    val(long_size, short_size) = cur_pos.foldLeft((0L, 0L)) {
-    //    (v, x) = >
-    //        if (x.side == "Long")
-    //            (v._1 + x.current_size, v._2)
-    //        else
-    //            (v._1 , v._2 + x.current_size)
-    //}
-
-    //if (long_size != 0 || short_size != 0)
-    //    sc.log(s"Error: should close all positions, $contract, $long_size, $short_size")  
+    auto r = ctx()->data_api()->bar(this->contract.c_str(), "1m", 0, true);
+    if (r.value)
+        ctx()->logger(INFO) <<  "on_fini: " << ctx()->trading_day() << ", bar count " << r.value->size() << endl;
+    else
+        ctx()->logger(FATAL) << "on_fini: " << ctx()->trading_day() << "," << r.msg << endl;
 }
 
 static PriceRange calc_price_range(double high, double low, double close ) 
@@ -112,12 +95,12 @@ static PriceRange calc_price_range(double high, double low, double close )
     double low_beta = 0.25;
     double enter_beta = 0.07;
 
-    double sell_setup = high + high_beta * (close - low); //# 观察卖出价
+    double sell_setup = high + high_beta * (close - low); // 观察卖出价
     double buy_setup  = low - high_beta * (high - close); // 观察买入价
-    double sell_enter = (1 + enter_beta) / 2 * (high + low) - enter_beta * low; // # 反转卖出价
-    double buy_enter  = (1 + enter_beta) / 2 * (high + low) - enter_beta * high; // # 反转买入价
-    double sell_break = buy_setup - low_beta * (sell_setup - buy_setup); // # 突破卖出价
-    double buy_break  = sell_setup + low_beta * (sell_setup - buy_setup); //# 突破买入价
+    double sell_enter = (1 + enter_beta) / 2 * (high + low) - enter_beta * low;  // 反转卖出价
+    double buy_enter  = (1 + enter_beta) / 2 * (high + low) - enter_beta * high; // 反转买入价
+    double sell_break = buy_setup - low_beta * (sell_setup - buy_setup); // 突破卖出价
+    double buy_break  = sell_setup + low_beta * (sell_setup - buy_setup); //突破买入价
 
     PriceRange range;
     range.sell_setup = sell_setup  ;
@@ -129,7 +112,7 @@ static PriceRange calc_price_range(double high, double low, double close )
     return range;
 }
 
-static bool is_finished(Order* order) 
+static bool is_finished(const Order* order)
 {
     return
         order->status == OS_Filled ||
@@ -142,7 +125,7 @@ int RBreakerStralet::cancel_unfinished_order()
     auto tapi = ctx()->trade_api();
     auto r = tapi->query_orders(account_id.c_str());
     if (!r.value) {
-        ctx()->log((string("error: query_orders: ") + r.msg).c_str());
+        ctx()->logger() << "error: query_orders: " << r.msg << endl;
         return -1;
     }
     int count = 0;
@@ -155,11 +138,12 @@ int RBreakerStralet::cancel_unfinished_order()
     return count;
 }
 
-void RBreakerStralet::place_order(const string& code, int64_t size, double price, const string action)
+void RBreakerStralet::place_order(const string& code, double price, int64_t size, const string action)
 {
-    auto r = m_ctx->trade_api()->place_order(account_id.c_str(), code.c_str(), size, price, action.c_str(), 0);
+    ctx()->logger(INFO) << "place order: " << code << "," << price << "," << size << "," << action << endl;
+    auto r = m_ctx->trade_api()->place_order(account_id.c_str(), code.c_str(),price, size, action.c_str(), 0);
     if (!r.value)
-        cerr << "place_order error:" << r.msg << endl;;
+        ctx()->logger(ERROR) << "place_order error:" << r.msg << endl;;
 }
 
 void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar) 
@@ -171,7 +155,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
     auto dapi = ctx()->data_api();
 
     if (bar->time == HMS(9, 31)) {
-        // 从夜盘行情中取 high, low, close计算
+        // 不交易夜盘，因此从夜盘行情中取 high, low, close计算
         double high = 0.0;
         double low = 100000000.0;
         double close = 0.0;
@@ -194,7 +178,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
 
     auto r = dapi->bar(contract.c_str(), "1m", 0, true);
     if (!r.value && r.value->size() < 2) {
-        ctx()->log((string("error: dapi.bar:") + r.msg).c_str());
+        ctx()->logger() << "error: dapi.bar: " << r.msg << endl;
         return;
     }
 
@@ -216,7 +200,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
         }
     }
 
-    shared_ptr<MarketQuote> quote;
+    shared_ptr<const MarketQuote> quote;
     {
         auto r = dapi->quote(contract.c_str());
         if (!r.value) return;
@@ -230,7 +214,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
             place_order(contract, quote->bid1, short_size, EA_Cover);
         return;
     }
-    // 趋势
+    // 向上突破
     if (bar_2->close <= price_range.buy_break && bar_1->close > price_range.buy_break) {
         if (long_size == 0)
             place_order(contract, quote->ask1, 1, EA_Buy);
@@ -239,6 +223,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
             place_order(contract, quote->ask1, short_size, EA_Cover);
     }
 
+    // 向下突破
     if (bar_2->close >= price_range.sell_break && bar_1->close < price_range.sell_break) {
         if (short_size == 0)
             place_order(contract, quote->bid1, 1, EA_Short);
@@ -247,8 +232,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
             place_order(contract, quote->bid1, long_size, EA_Sell);
     }
 
-    // 反转
-    //   多单反转
+    // 多单反转
     if (bar_1->high > price_range.sell_setup && bar_1->close > price_range.sell_enter)
         count_1 = 1;
 
@@ -258,7 +242,7 @@ void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar)
             place_order(contract, quote->bid1, 1, EA_Short);
         }
     }
-    //   空单反转
+    // 空单反转
     if (bar_1->low < price_range.buy_setup) 
         count_2 = 1;
 

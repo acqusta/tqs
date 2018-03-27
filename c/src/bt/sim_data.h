@@ -17,17 +17,24 @@ class SimStraletContext;
 
 struct TickCache {
     int64_t pos;
-    shared_ptr<vector<MarketQuote>> ticks;
+    int64_t size;
+    MarketQuote** first;
+    MarketQuote** last;
+    shared_ptr<const vector<MarketQuote>> ticks;
 };
 
 struct BarTickCache {
     int64_t pos;
-    shared_ptr<vector<Bar>> bars;
+    int64_t size;
+    Bar** first;
+    Bar** last;
+    shared_ptr<const vector<Bar>> bars;
 };
 
 struct DailyBarTickCache {
-    int pos;
-    shared_ptr<vector<DailyBar>> bars;
+    int64_t pos;
+    int64_t size;
+    shared_ptr<const vector<DailyBar>> bars;
 };
 
 class SimDataApi : public DataApi {
@@ -40,12 +47,12 @@ public:
     {
     }
 
-    virtual CallResult<vector<MarketQuote>> tick(const char* code, int trading_day) override;
-    virtual CallResult<vector<Bar>>         bar(const char* code, const char* cycle, int trading_day, bool align) override;
-    virtual CallResult<vector<DailyBar>>    daily_bar(const char* code, const char* price_adj, bool align) override;
-    virtual CallResult<MarketQuote>         quote(const char* code) override;
-    virtual CallResult<vector<string>>      subscribe(const vector<string>& codes) override;
-    virtual CallResult<vector<string>>      unsubscribe(const vector<string>& codes) override;
+    virtual CallResult<const vector<MarketQuote>> tick(const char* code, int trading_day) override;
+    virtual CallResult<const vector<Bar>>         bar(const char* code, const char* cycle, int trading_day, bool align) override;
+    virtual CallResult<const vector<DailyBar>>    daily_bar(const char* code, const char* price_adj, bool align) override;
+    virtual CallResult<const MarketQuote>         quote(const char* code) override;
+    virtual CallResult<const vector<string>>      subscribe(const vector<string>& codes) override;
+    virtual CallResult<const vector<string>>      unsubscribe(const vector<string>& codes) override;
 
     virtual void set_callback(DataApi_Callback* callback) override;
 

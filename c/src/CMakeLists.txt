@@ -22,6 +22,6 @@ include_directories(.)
 #add_library(tqslib STATIC ${SRC})
 add_executable(tqs_demo ${SRC})
 
-target_link_libraries(tqs_demo tqapi)
+target_link_libraries(tqs_demo tqapi-static)
 
 install(TARGETS tqs_demo RUNTIME DESTINATION bin)

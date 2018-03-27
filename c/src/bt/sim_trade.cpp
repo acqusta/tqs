@@ -1,6 +1,8 @@
 #include <assert.h>
+#include <string.h>
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -43,7 +45,7 @@ void get_action_effect(const string& action, string* pos_side, int* inc_dir)
 }
 
 
-CallResult<vector<AccountInfo>> SimTradeApi::query_account_status()
+CallResult<const vector<AccountInfo>> SimTradeApi::query_account_status()
 {
     auto infos = make_shared<vector<AccountInfo>>();
 
@@ -58,42 +60,42 @@ CallResult<vector<AccountInfo>> SimTradeApi::query_account_status()
         infos->push_back(info);
     }
 
-    return CallResult<vector<AccountInfo>>(infos);
+    return CallResult<const vector<AccountInfo>>(infos);
 }
 
-CallResult<Balance> SimTradeApi::query_balance(const char* account_id)
+CallResult<const Balance> SimTradeApi::query_balance(const char* account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_balance() :
-        CallResult<Balance>("-1,no such account");
+        CallResult<const Balance>("-1,no such account");
 }
 
-CallResult<vector<Order>> SimTradeApi::query_orders(const char* account_id)
+CallResult<const vector<Order>> SimTradeApi::query_orders(const char* account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_orders() :
-        CallResult<vector<Order>>("-1,no such account");
+        CallResult<const vector<Order>>("-1,no such account");
 }
 
-CallResult<vector<Trade>> SimTradeApi::query_trades(const char* account_id)
+CallResult<const vector<Trade>> SimTradeApi::query_trades(const char* account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_trades() :
-        CallResult<vector<Trade>>("-1,no such account");
+        CallResult<const vector<Trade>>("-1,no such account");
 }
 
-CallResult<vector<Position>> SimTradeApi::query_positions(const char* account_id)
+CallResult<const vector<Position>> SimTradeApi::query_positions(const char* account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_positions() :
-        CallResult<vector<Position>>("-1,no such account");
+        CallResult<const vector<Position>>("-1,no such account");
 }
 
-CallResult<OrderID> SimTradeApi::place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id)
+CallResult<const OrderID> SimTradeApi::place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->place_order(code, price, size, action, order_id):
-        CallResult<OrderID>("-1,no such account");
+        CallResult<const OrderID>("-1,no such account");
 }
 
 CallResult<bool> SimTradeApi::cancel_order(const char* account_id, const char* code, int order_id)
@@ -172,7 +174,7 @@ SimAccount::SimAccount(SimStraletContext* ctx, const string& account_id, double 
     m_his_tdata.push_back(m_tdata);
 }
 
-CallResult<Balance> SimAccount::query_balance()
+CallResult<const Balance> SimAccount::query_balance()
 {
     auto bal = make_shared<Balance>();
     bal->account_id     = m_tdata->account_id;
@@ -183,10 +185,10 @@ CallResult<Balance> SimAccount::query_balance()
     //bal->float_pnl = m_float_pnl;
     //bal->close_pnl = m_close_pnl;
 
-    return CallResult<Balance>(bal);
+    return CallResult<const Balance>(bal);
 }
 
-CallResult<vector<Order>> SimAccount::query_orders()
+CallResult<const vector<Order>> SimAccount::query_orders()
 {
     auto orders = make_shared<vector<Order>>();
     for (auto & e : m_tdata->orders)
@@ -196,10 +198,10 @@ CallResult<vector<Order>> SimAccount::query_orders()
         return a.entrust_no < b.entrust_no;
     });
 
-    return CallResult<vector<Order>>(orders);
+    return CallResult<const vector<Order>>(orders);
 }
 
-CallResult<vector<Trade>> SimAccount::query_trades()
+CallResult<const vector<Trade>> SimAccount::query_trades()
 {
     auto trades = make_shared<vector<Trade>>();
     for (auto & e : m_tdata->trades)
@@ -209,10 +211,10 @@ CallResult<vector<Trade>> SimAccount::query_trades()
         return a.fill_no < b.fill_no;
     });
 
-    return CallResult<vector<Trade>>(trades);
+    return CallResult<const vector<Trade>>(trades);
 }
 
-CallResult<vector<Position>> SimAccount::query_positions()
+CallResult<const vector<Position>> SimAccount::query_positions()
 {
     auto poses = make_shared<vector<Position>>();
     for (auto & e : m_tdata->positions)
@@ -222,38 +224,44 @@ CallResult<vector<Position>> SimAccount::query_positions()
         return a.code < b.code;
     });
 
-    return CallResult<vector<Position>>(poses);
+    return CallResult<const vector<Position>>(poses);
 }
 
-CallResult<OrderID> SimAccount::place_order(const char* code, double price, int64_t size, const char* action, int order_id)
+CallResult<const OrderID> SimAccount::validate_order(const char* code, double price, int64_t size, const char* action)
 {
     DateTime dt;
     m_ctx->cur_time(&dt);
 
     auto q = m_ctx->data_api()->quote(code).value;
-    cout << "place_order: " <<dt.date << "," << dt.time <<","
-        << m_tdata->account_id << "," << code << "," << price << "," << size << "," << action << ","
-        << "price: " << q->last <<"," << q->ask1 <<"," << q->bid1 << endl;
-    
+    //cout << "place_order: " << dt.date << "," << dt.time << ","
+    //    << m_tdata->account_id << "," << code << "," << price << "," << size << "," << action << ","
+    //    << "price: " << q->last << "," << q->ask1 << "," << q->bid1 << endl;
+
     const char *p = strrchr(code, '.');
-    if (!p) return CallResult<OrderID>("-1,wrong code");
+    if (!p)
+        return CallResult<const OrderID>("-1,wrong code");
+
+    if (price <= 0.000001)
+        return CallResult<const OrderID>("-1,wrong price");
+    if (size <= 0)
+        return CallResult<const OrderID>("-1,wrong size");
 
     string mkt(p + 1);
     bool is_open_time = false;
     if (mkt == "SH" || mkt == "SZ") {
         is_open_time =
             (dt.time >= HMS(9, 30) && dt.time < HMS(11, 30) ||
-             dt.time >= HMS(13, 0) && dt.time < HMS(15, 00));
+                dt.time >= HMS(13, 0) && dt.time < HMS(15, 00));
     }
     else {
         is_open_time =
-            (dt.time >= HMS( 9,  0) && dt.time < HMS(10, 15) ||
-             dt.time >= HMS(10, 30) && dt.time < HMS(11, 30) ||
-             dt.time >= HMS(13, 30) && dt.time < HMS(15, 00));
+            (dt.time >= HMS(9, 0) && dt.time < HMS(10, 15) ||
+                dt.time >= HMS(10, 30) && dt.time < HMS(11, 30) ||
+                dt.time >= HMS(13, 30) && dt.time < HMS(15, 00));
     }
 
     if (!is_open_time)
-        return CallResult<OrderID>("-1,market is closed");
+        return CallResult<const OrderID>("-1,market is closed");
 
     string pos_side;
     int inc_dir = 0;
@@ -263,50 +271,82 @@ CallResult<OrderID> SimAccount::place_order(const char* code, double price, int6
     if (inc_dir == -1) {
         if (pos->enable_size - pos->frozen_size < size) {
             stringstream ss;
-            ss << "-1,no enough size for close(" << pos->enable_size << "," 
+            ss << "-1,no enough size for close(" << pos->enable_size << ","
                 << pos->frozen_size << "," << size << ")";
-            return CallResult<OrderID>(ss.str());
+            return CallResult<const OrderID>(ss.str());
         }
+        // XXX move to place_order
         pos->frozen_size += size;
     }
     else {
         if (price*size > m_tdata->enable_balance - m_tdata->frozen_balance)
-            return CallResult<OrderID>("-1,no enough money");
+            return CallResult<const OrderID>("-1,no enough money");
+
+        // XXX move to place_order
         m_tdata->frozen_balance += price*size;
     }
 
     int32_t my_order_id = ++g_order_id;
     Order ord;
     char entrust_no[100]; sprintf(entrust_no, "sim-%d", my_order_id);
- 
+
+    auto oid = make_shared<OrderID>();
+    oid->entrust_no = entrust_no;
+    oid->order_id = my_order_id;
+    return CallResult<const OrderID>(oid);
+}
+
+CallResult<const OrderID> SimAccount::place_order(const char* code, double price, int64_t size, const char* action, int order_id)
+{
+    auto r = validate_order(code, price, size, action);
+
+    string status;
+    string status_msg;
+    string entrust_no;
+    int32_t my_order_id;
+
+    if (r.value) {
+        entrust_no = r.value->entrust_no;
+        my_order_id = r.value->order_id;
+        status = OS_New;
+    }
+    else {
+        my_order_id = ++g_order_id;
+        char tmp[100]; sprintf(tmp, "sim-%d", my_order_id);
+        entrust_no = tmp;
+        status = OS_Rejected;
+        status_msg = r.msg;
+    }
+
+    DateTime dt;
+    m_ctx->cur_time(&dt);
+
     auto order = make_shared<Order>();
-    order->account_id = m_tdata->account_id;
-    order->code = code;
-    order->name = code;
-    order->entrust_no = entrust_no;
+    order->account_id     = m_tdata->account_id;
+    order->code           = code;
+    order->name           = code;
+    order->entrust_no     = entrust_no;
     order->entrust_action = action;
-    order->entrust_price = price;
-    order->entrust_size = size;
-    order->entrust_date = dt.date;
-    order->entrust_time = dt.time;
-    order->fill_price = 0.0;
-    order->fill_size = 0L;
-    order->status = "New";
-    order->status_msg = "";
-    order->order_id = my_order_id;
+    order->entrust_price  = price;
+    order->entrust_size   = size;
+    order->entrust_date   = dt.date;
+    order->entrust_time   = dt.time;
+    order->fill_price     = 0.0;
+    order->fill_size      = 0L;
+    order->status         = status;
+    order->status_msg     = "";
+    order->order_id       = my_order_id;
+    order->status_msg     = status_msg;
 
     m_tdata->orders[entrust_no] = order;
     m_ord_status_ind_list.push_back(make_shared<Order>(*order));
 
-    auto oid = make_shared<OrderID>();
-    oid->entrust_no = entrust_no;
-    oid->order_id = order_id;
-    return CallResult<OrderID>(oid);
+    return r;
 }
 
 CallResult<bool> SimAccount::cancel_order(const char* code, const char* entrust_no)
 {
-    cout << "cancel_order: " << m_tdata->account_id << "," << code << "," << entrust_no << endl;
+    //cout << "cancel_order: " << m_tdata->account_id << "," << code << "," << entrust_no << endl;
 
     auto it = m_tdata->orders.find(entrust_no);
     if (it == m_tdata->orders.end())
@@ -381,51 +421,44 @@ Position* SimAccount::get_position(const string& code, const string& side)
     return pos.get();
 }
 
-void SimAccount::update_position(const string& code, const string& side, int64_t size, double fill_price)
+void SimAccount::make_trade(double fill_price, Order* order)
 {
-    auto pos = get_position(code, side);
-
-    if (size > 0) {
-        // Buy
-        pos->current_size += size;
-        if (is_future(code.c_str()))
-            pos->enable_size += size;
-        pos->cost += fill_price * size;
-        pos->cost_price = pos->cost / pos->current_size;
-        pos->today_size += size;
-    }
-    else {
-        // Sell
-        size *= -1;
-        pos->current_size -= size;
-        if (!is_future(code.c_str()))
-            pos->enable_size -= size;
-        else
-            pos->close_pnl += size * (fill_price - pos->cost_price);
-    }
-}
-
-void SimAccount::make_trade(double price, Order* order)
-{
-    cout << "make_trade: " << m_tdata->account_id << "," << order->code << "," << order->entrust_size << ","
-        << order->entrust_action << "," << price << endl;
+    //cout << "make_trade: " << m_tdata->account_id << "," << order->code << "," << order->entrust_size << ","
+    //    << order->entrust_action << "," << fill_price << endl;
 
     string pos_side;
     int inc_dir = 0;
 
+    int64_t fill_size = order->entrust_size;
+
     get_action_effect(order->entrust_action, &pos_side, &inc_dir);
     auto pos = get_position(order->code, pos_side);
     if (inc_dir == 1) {
+        pos->current_size += fill_size;
+        if (is_future(order->code.c_str()))
+            pos->enable_size += fill_size;
+        pos->cost += fill_price * fill_size;
+        pos->cost_price = pos->cost / pos->current_size;
+
         m_tdata->frozen_balance -= order->entrust_size * order->entrust_price;
-        m_tdata->enable_balance -= order->entrust_size * price;
+        m_tdata->enable_balance -= order->entrust_size * fill_price;
     }
     else {
         pos->frozen_size -= order->entrust_size;
+        pos->current_size -= fill_size;
+        pos->enable_size  -= fill_size; // TODO: check if it is right
+        assert(pos->enable_size >= 0);
+        pos->close_pnl += fill_size * (fill_price - pos->cost_price);
+        m_tdata->enable_balance += fill_size * fill_price;
+        if (pos->current_size == 0) {
+            pos->cost = 0.0;
+            pos->cost_price = 0.0;
+        }
     }
 
-    order->fill_price = price;
-    order->fill_size = order->entrust_size;
-    order->status = OS_Filled;
+    order->fill_price = fill_price;
+    order->fill_size  = fill_size;
+    order->status     = OS_Filled;
 
     // Must make a copy!
     m_ord_status_ind_list.push_back(make_shared<Order>(*order));
@@ -458,17 +491,14 @@ void SimAccount::try_buy(Order* order)
 {
     if (m_ctx->data_level() == BT_TICK) {
         auto q = m_ctx->data_api()->quote(order->code.c_str());
-        if (q.value && q.value->last < order->entrust_price) {
+        if (q.value && q.value->last < order->entrust_price)
             make_trade(q.value->last, order);
-            update_position(order->code, SD_Long, order->fill_size, order->fill_price);
-        }
     }
     else if (m_ctx->data_level() == BT_BAR1M) {
         auto bar = m_ctx->sim_dapi()->last_bar(order->code.c_str());
         if (bar && bar->low < order->entrust_price) {
             double fill_price = min(order->entrust_price, bar->high);
             make_trade(fill_price, order);
-            update_position(order->code, SD_Long, order->fill_size, order->fill_price);
         }
     }
     else {
@@ -480,17 +510,14 @@ void SimAccount::try_sell(Order* order)
 {
     if (m_ctx->data_level() == BT_TICK) {
         auto q = m_ctx->data_api()->quote(order->code.c_str());
-        if (q.value && q.value->last > order->entrust_price) {
+        if (q.value && q.value->last > order->entrust_price)
             make_trade(q.value->last, order);
-            update_position(order->code, SD_Long, -order->fill_size, order->fill_price);
-        }
     }
     else if (m_ctx->data_level() == BT_BAR1M) {
         auto bar = m_ctx->sim_dapi()->last_bar(order->code.c_str());
         if (bar && bar->high > order->entrust_price) {
             double fill_price = max(order->entrust_price, bar->low);
             make_trade(fill_price, order);
-            update_position(order->code, SD_Long, -order->fill_size, order->fill_price);
         }
     }
     else {
@@ -503,17 +530,14 @@ void SimAccount::try_short(Order* order)
     // fixme
     if (m_ctx->data_level() == BT_TICK) {
         auto q = m_ctx->data_api()->quote(order->code.c_str());
-        if (q.value && q.value->last > order->entrust_price) {
+        if (q.value && q.value->last > order->entrust_price)
             make_trade(q.value->last, order);
-            update_position(order->code, SD_Short, order->fill_size, order->fill_price);
-        }
     }
     else if (m_ctx->data_level() == BT_BAR1M) {
         auto bar = m_ctx->sim_dapi()->last_bar(order->code.c_str());
         if (bar && bar->high > order->entrust_price) {
             double fill_price = max(order->entrust_price, bar->low);
             make_trade(fill_price, order);
-            update_position(order->code, SD_Short, order->fill_size, order->fill_price);
         }
     }
     else {
@@ -525,17 +549,14 @@ void SimAccount::try_cover(Order* order)
 {
     if (m_ctx->data_level() == BT_TICK) {
         auto q = m_ctx->data_api()->quote(order->code.c_str());
-        if (q.value && q.value->last < order->entrust_price) {
+        if (q.value && q.value->last < order->entrust_price)
             make_trade(q.value->last, order);
-            update_position(order->code, SD_Short, order->fill_size, order->fill_price);
-        }
     }
     else if (m_ctx->data_level() == BT_BAR1M) {
         auto bar = m_ctx->sim_dapi()->last_bar(order->code.c_str());
         if (bar && bar->low < order->entrust_price) {
             double fill_price = min(order->entrust_price, bar->high);
             make_trade(fill_price, order);
-            update_position(order->code, SD_Short, -order->fill_size, order->fill_price);
         }
     }
     else {
@@ -559,6 +580,21 @@ void SimAccount::move_to(int trading_day)
     tdata->trading_day    = trading_day;
     tdata->frozen_balance = 0.0;
 
+    for (auto e : m_tdata->positions) {
+        if (e.second->current_size == 0) continue;
+
+        auto pos = e.second;
+        auto new_pos = make_shared<Position>();
+        *new_pos = *pos;
+        new_pos->init_size    = pos->current_size;
+        new_pos->enable_size  = pos->current_size;
+        new_pos->current_size = pos->current_size;
+        new_pos->today_size   = 0;
+        new_pos->frozen_size  = 0;
+        new_pos->commission   = 0.0;
+        tdata->positions[e.first] = new_pos;
+    }
+
     m_his_tdata.push_back(tdata);
     m_tdata = tdata;
 
@@ -570,16 +606,18 @@ void SimAccount::save_data(const string& dir)
 {
     {
         stringstream ss;
-        ss << dir << "/balance-" << m_tdata->account_id << ".csv";
+        ss << dir << "/" << m_tdata->account_id << "-balance.csv";
         ofstream out;
         out.open(ss.str());
         if (!out.is_open()) {
             cerr << "Can't open file " << ss.str();
             return;
         }
-        out << "account_id,trading_day,init_balance,enable_balance\n";
+        out << "account_id,trading_day,init_balance,enable_balance,frozen_balance\n";
         for (auto& tdata : m_his_tdata) {
-            out << tdata->account_id << ","
+            out << setprecision(4) << fixed
+                << tdata->account_id << ","
+                << tdata->account_id << ","
                 << tdata->trading_day << ","
                 << tdata->init_balance << ","
                 << tdata->enable_balance << ","
@@ -589,7 +627,7 @@ void SimAccount::save_data(const string& dir)
     }
     {
         stringstream ss;
-        ss << dir << "/positions-" << m_tdata->account_id << ".csv";
+        ss << dir << "/" << m_tdata->account_id << "-positions.csv";
         ofstream out;
         out.open(ss.str());
         if (!out.is_open()) {
@@ -608,7 +646,8 @@ void SimAccount::save_data(const string& dir)
             });
             
             for (auto& pos : positions)
-                out << tdata->account_id << ","
+                out << setprecision(4) << fixed
+                    << tdata->account_id << ","
                     << tdata->trading_day << ","
                     << pos->code << "," << pos->name << ","
                     << pos->init_size << "," << pos->current_size << ","
@@ -620,7 +659,7 @@ void SimAccount::save_data(const string& dir)
     }
     {
         stringstream ss;
-        ss << dir << "/orders-" << m_tdata->account_id << ".csv";
+        ss << dir << "/" << m_tdata->account_id << "-orders.csv";
         ofstream out;
         out.open(ss.str());
         if (!out.is_open()) {
@@ -637,7 +676,8 @@ void SimAccount::save_data(const string& dir)
             });
 
             for (auto& ord : orders)
-                out << tdata->account_id << ","
+                out << setprecision(4) << fixed
+                    << tdata->account_id << ","
                     << tdata->trading_day << ","
                     << ord->code << "," << ord->name << ","
                     << ord->entrust_date << "," << ord->entrust_time << ","
@@ -650,7 +690,7 @@ void SimAccount::save_data(const string& dir)
 
     {
         stringstream ss;
-        ss << dir << "/trades-" << m_tdata->account_id << ".csv";
+        ss << dir << "/" << m_tdata->account_id << "-trades.csv";
         ofstream out;
         out.open(ss.str());
         if (!out.is_open()) {
@@ -667,7 +707,8 @@ void SimAccount::save_data(const string& dir)
             });
 
             for (auto& trd : trades)
-                out << tdata->account_id << ","
+                out << setprecision(4) << fixed
+                    << tdata->account_id << ","
                     << tdata->trading_day << ","
                     << trd->code << "," << trd->name << ","
                     << trd->entrust_no << "," << trd->entrust_action << ","

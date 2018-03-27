@@ -2,6 +2,7 @@
 #define _SIM_TAPI_H
 
 #include <unordered_map>
+#include <list>
 #include "stralet.h"
 #include "tquant_api.h"
 
@@ -28,13 +29,14 @@ class SimAccount {
 public:
     SimAccount(SimStraletContext* ctx, const string& account_id, double init_balance);
 
-    CallResult<Balance>             query_balance();
-    CallResult<vector<Order>>       query_orders();
-    CallResult<vector<Trade>>       query_trades();
-    CallResult<vector<Position>>    query_positions();
-    CallResult<OrderID>             place_order(const char* code, double price, int64_t size, const char* action, int order_id);
-    CallResult<bool>                cancel_order(const char* code, int order_id);
-    CallResult<bool>                cancel_order(const char* code, const char* entrust_no);
+    CallResult<const Balance>             query_balance();
+    CallResult<const vector<Order>>       query_orders();
+    CallResult<const vector<Trade>>       query_trades();
+    CallResult<const vector<Position>>    query_positions();
+    CallResult<const OrderID>             place_order(const char* code, double price, int64_t size, const char* action, int order_id);
+    CallResult<bool>                      cancel_order(const char* code, int order_id);
+    CallResult<bool>                      cancel_order(const char* code, const char* entrust_no);
+    CallResult<const OrderID>             validate_order(const char* code, double price, int64_t size, const char* action);
 
     void try_match();
 
@@ -44,7 +46,6 @@ public:
     void try_sell (Order* order);
 
     void make_trade     (double price, Order* order);
-    void update_position(const string& code, const string& side, int64_t size, double fill_price);
     Position* get_position(const string& code, const string& side);
 
     void move_to(int trading_day);
@@ -74,15 +75,15 @@ public:
     }
 
     // TradeApi
-    virtual CallResult<vector<AccountInfo>> query_account_status();
-    virtual CallResult<Balance> query_balance(const char* account_id);
-    virtual CallResult<vector<Order>> query_orders(const char* account_id);
-    virtual CallResult<vector<Trade>> query_trades(const char* account_id);
-    virtual CallResult<vector<Position>> query_positions(const char* account_id);
-    virtual CallResult<OrderID> place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id);
-    virtual CallResult<bool> cancel_order(const char* account_id, const char* code, int order_id);
-    virtual CallResult<bool> cancel_order(const char* account_id, const char* code, const char* entrust_no);
-    virtual CallResult<string> query(const char* account_id, const char* command, const char* params);
+    virtual CallResult<const vector<AccountInfo>>   query_account_status();
+    virtual CallResult<const Balance>               query_balance(const char* account_id);
+    virtual CallResult<const vector<Order>>         query_orders(const char* account_id);
+    virtual CallResult<const vector<Trade>>         query_trades(const char* account_id);
+    virtual CallResult<const vector<Position>>      query_positions(const char* account_id);
+    virtual CallResult<const OrderID>               place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id);
+    virtual CallResult<bool>                        cancel_order(const char* account_id, const char* code, int order_id);
+    virtual CallResult<bool>                        cancel_order(const char* account_id, const char* code, const char* entrust_no);
+    virtual CallResult<string>                      query(const char* account_id, const char* command, const char* params);
     virtual void set_callback(TradeApi_Callback* callback);
 
     // TqsTradeApi

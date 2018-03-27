@@ -1,8 +1,10 @@
 #ifndef _TQUANT_STRALET_H
 #define _TQUANT_STRALET_H
 
-#include "tquant_api.h"
 #include <chrono>
+#include <ostream>
+
+#include "tquant_api.h"
 
 namespace tquant { namespace stra {
 
@@ -82,6 +84,13 @@ namespace tquant { namespace stra {
         StraletContext* m_ctx;
     };
 
+    enum LogLevel {
+        INFO,
+        WARNING,
+        ERROR,
+        FATAL
+    };
+
     class StraletContext {
     public:
         virtual int32_t trading_day() = 0;
@@ -95,7 +104,8 @@ namespace tquant { namespace stra {
         virtual DataApi*  data_api(const char* source = nullptr) = 0;
         virtual TradeApi* trade_api() = 0;
 
-        virtual void log(const char* text) = 0;
+        virtual ostream& logger(LogLevel level = LogLevel::INFO) = 0;
+
         virtual string get_parameter(const char* name, const char* def_value) = 0;
 
         virtual string mode() = 0;
