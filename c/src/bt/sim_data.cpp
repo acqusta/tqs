@@ -27,7 +27,7 @@ int cmp_time(int date_1, int time_1, int date_2, int time_2)
     return 1;
 }
 
-CallResult<const vector<MarketQuote>> SimDataApi::tick(const char* code, int trading_day)
+CallResult<const vector<MarketQuote>> SimDataApi::tick(const string& code, int trading_day)
 {
     if (trading_day == 0 || trading_day == m_ctx->trading_day()) {
         auto it = m_tick_caches.find(code);
@@ -42,9 +42,9 @@ CallResult<const vector<MarketQuote>> SimDataApi::tick(const char* code, int tra
     }
 }
 
-CallResult<const vector<Bar>> SimDataApi::bar(const char* code, const char* cycle, int trading_day, bool align)
+CallResult<const vector<Bar>> SimDataApi::bar(const string& code, const string& cycle, int trading_day, bool align)
 {
-    if (strcmp(cycle, "1m"))
+    if (cycle != "1m")
         return CallResult<const vector<Bar>>("-1,unsupported cycle");
 
     if (!align)
@@ -64,19 +64,20 @@ CallResult<const vector<Bar>> SimDataApi::bar(const char* code, const char* cycl
         return CallResult<const vector<Bar>>("-1,try to get data after current trading_day");
 }
 
-CallResult<const vector<DailyBar>> SimDataApi::daily_bar(const char* code, const char* price_adj, bool align)
+CallResult<const vector<DailyBar>> SimDataApi::daily_bar(const string& code, const string& price_adj, bool align)
 {
     // TODO: get it from cache.
     auto r = m_dapi->daily_bar(code, price_adj, align);
     if (r.value) {
         auto today = m_ctx->trading_day();
         auto bars = r.value;
-        auto it = find_if(bars->rbegin(), bars->rbegin(), [today](const DailyBar& b) { return b.date < today; });
-        if (it == bars->rend())
+        auto it = find_if(bars->begin(), bars->end(), [today](const DailyBar& b) { return b.date >= today; });
+        if (it == bars->end())
             // Shouldn't happen?
             return CallResult<const vector<DailyBar> > ("-1,no data");
         else {
-            auto new_bars = make_shared<vector<DailyBar>>(bars->begin(), it.base());
+            auto new_bars = make_shared<vector<DailyBar>>(bars->begin(), it-1);
+            cout << new_bars->size() << "," << bars->size() << "," << it->date << endl;
             return CallResult<const vector<DailyBar>>(new_bars);
         }
     }
@@ -85,7 +86,7 @@ CallResult<const vector<DailyBar>> SimDataApi::daily_bar(const char* code, const
     }
 }
 
-CallResult<const MarketQuote> SimDataApi::quote(const char* code)
+CallResult<const MarketQuote> SimDataApi::quote(const string& code)
 {
     if (m_ctx->data_level() == BT_BAR1M) {
         auto it = m_bar_caches.find(code);

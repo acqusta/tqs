@@ -13,6 +13,11 @@ set(SRC
   bt/sim_trade.h
   bt/demo.cpp
   bt/demo_rbreaker.cpp
+  bt/demo_doublema.cpp
+  bt/demo_ifhft.cpp
+  algo/algo_pm.cpp
+  algo/algo_twap.cpp
+  algo/algo_vwap.cpp
   stralet.cpp
   stralet.h    
 )

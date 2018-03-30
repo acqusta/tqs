@@ -33,10 +33,10 @@ public:
     CallResult<const vector<Order>>       query_orders();
     CallResult<const vector<Trade>>       query_trades();
     CallResult<const vector<Position>>    query_positions();
-    CallResult<const OrderID>             place_order(const char* code, double price, int64_t size, const char* action, int order_id);
-    CallResult<bool>                      cancel_order(const char* code, int order_id);
-    CallResult<bool>                      cancel_order(const char* code, const char* entrust_no);
-    CallResult<const OrderID>             validate_order(const char* code, double price, int64_t size, const char* action);
+    CallResult<const OrderID>             place_order(const string& code, double price, int64_t size, const string& action, int order_id);
+    CallResult<bool>                      cancel_order(const string& code, int order_id);
+    CallResult<bool>                      cancel_order(const string& code, const string& entrust_no);
+    CallResult<const OrderID>             validate_order(const string& code, double price, int64_t size, const string& action);
 
     void try_match();
 
@@ -64,7 +64,7 @@ private:
     static int g_fill_id;;
 };
 
-class SimTradeApi : public TqsTradeApi {
+class SimTradeApi : public TradeApi {
     friend SimStraletContext;
 public:
     SimTradeApi(SimStraletContext* ctx, vector<SimAccount*>& accounts)
@@ -76,22 +76,17 @@ public:
 
     // TradeApi
     virtual CallResult<const vector<AccountInfo>>   query_account_status();
-    virtual CallResult<const Balance>               query_balance(const char* account_id);
-    virtual CallResult<const vector<Order>>         query_orders(const char* account_id);
-    virtual CallResult<const vector<Trade>>         query_trades(const char* account_id);
-    virtual CallResult<const vector<Position>>      query_positions(const char* account_id);
-    virtual CallResult<const OrderID>               place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id);
-    virtual CallResult<bool>                        cancel_order(const char* account_id, const char* code, int order_id);
-    virtual CallResult<bool>                        cancel_order(const char* account_id, const char* code, const char* entrust_no);
-    virtual CallResult<string>                      query(const char* account_id, const char* command, const char* params);
+    virtual CallResult<const Balance>               query_balance  (const string& account_id);
+    virtual CallResult<const vector<Order>>         query_orders   (const string& account_id);
+    virtual CallResult<const vector<Trade>>         query_trades   (const string& account_id);
+    virtual CallResult<const vector<Position>>      query_positions(const string& account_id);
+    virtual CallResult<const OrderID>               place_order    (const string& account_id, const string& code, double price, int64_t size, const string& action, int order_id);
+    virtual CallResult<bool>                        cancel_order   (const string& account_id, const string& code, int order_id);
+    virtual CallResult<bool>                        cancel_order   (const string& account_id, const string& code, const string& entrust_no);
+    virtual CallResult<string>                      query          (const string& account_id, const string& command, const string& params);
     virtual void set_callback(TradeApi_Callback* callback);
 
-    // TqsTradeApi
-    virtual CallResult<vector<NetPosition>> query_net_position(const char* account_id);
-    virtual CallResult<string>  place_auto_order(const char* account_id, const char* code, int64_t size);
-    virtual CallResult<bool>    cancel_auto_order(const char* account_id, const char* code, const char* entrust_no);
-
-    SimAccount* get_account(const char* account_id) {
+    SimAccount* get_account(const string& account_id) {
         auto it = m_accounts.find(account_id);
         return it != m_accounts.end() ? it->second : nullptr;
     }

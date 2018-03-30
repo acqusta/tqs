@@ -116,7 +116,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<AccountInfo>>(accounts);
         }
 
-        virtual CallResult<const Balance> query_balance(const char* account_id) override
+        virtual CallResult<const Balance> query_balance(const string& account_id) override
         {
             MsgPackPacker pk;
             pk.pack_map(1);
@@ -140,7 +140,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const Balance>(bal);
         }
 
-        virtual CallResult<const vector<Order>> query_orders(const char* account_id) override
+        virtual CallResult<const vector<Order>> query_orders(const string& account_id) override
         {
             MsgPackPacker pk;
             pk.pack_map(1);
@@ -164,7 +164,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<Order>>(orders);
         }
 
-        virtual CallResult<const vector<Trade>> query_trades(const char* account_id) override
+        virtual CallResult<const vector<Trade>> query_trades(const string& account_id) override
         {
             MsgPackPacker pk;
             pk.pack_map(1);
@@ -188,7 +188,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<Trade>>(trades);
         }
 
-        virtual CallResult<const vector<Position>> query_positions(const char* account_id) override
+        virtual CallResult<const vector<Position>> query_positions(const string& account_id) override
         {
             MsgPackPacker pk;
             pk.pack_map(1);
@@ -236,7 +236,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<Position>>(positions);
         }
 
-        virtual CallResult<const OrderID> place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id) override
+        virtual CallResult<const OrderID> place_order(const string& account_id, const string& code, double price, int64_t size, const string& action, int order_id) override
         {
             MsgPackPacker pk;
             pk.pack_map(6);
@@ -268,7 +268,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const OrderID>(orderid);
         }
 
-        virtual CallResult<bool> cancel_order(const char* account_id, const char* code, int order_id) override
+        virtual CallResult<bool> cancel_order(const string& account_id, const string& code, int order_id) override
         {
             MsgPackPacker pk;
             pk.pack_map(3);
@@ -289,7 +289,7 @@ namespace tquant { namespace api { namespace impl {
             }
         }
 
-        virtual CallResult<bool> cancel_order(const char* account_id, const char* code, const char* entrust_no) override
+        virtual CallResult<bool> cancel_order(const string& account_id, const string& code, const string& entrust_no) override
         {
             MsgPackPacker pk;
             pk.pack_map(3);
@@ -310,7 +310,7 @@ namespace tquant { namespace api { namespace impl {
             }
         }
 
-        virtual CallResult<string> query(const char* account_id, const char* command, const char* params) override
+        virtual CallResult<string> query(const string& account_id, const string& command, const string& params) override
         {
             return CallResult<string>("-1,to be implemented");
         }

@@ -29,7 +29,7 @@ void bt_run(const BackTestConfig & a_cfg, function<Stralet*()> creator)
     cout << "backtest: " << cfg.begin_date << "-" << cfg.end_date << "," << cfg.data_level << endl
          << "          outdir " << cfg.result_dir << endl;
 
-    TQuantApi* tqapi = TQuantApi::create(cfg.dapi_addr.c_str());
+    TQuantApi* tqapi = TQuantApi::create(cfg.dapi_addr);
     DataApi* dapi = tqapi->data_api();
 
     SimStraletContext* sc = new SimStraletContext();

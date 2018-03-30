@@ -60,7 +60,7 @@ class RBreakerStralet : public Stralet {
 
 public:
     virtual void on_init(StraletContext* sc) override;
-    virtual void on_bar(const char* cycle, shared_ptr<Bar> bar) override;
+    virtual void on_bar(const char* cycle, shared_ptr<const Bar> bar) override;
     virtual void on_fini() override;
 
     int cancel_unfinished_order();
@@ -131,6 +131,7 @@ int RBreakerStralet::cancel_unfinished_order()
     int count = 0;
     for (auto&ord : *r.value) {
         if (ord.code == contract && !is_finished(&ord)) {
+            m_ctx->logger() << "cancel order " << ord.code << "," << ord.entrust_price << "," << ord.entrust_action << endl;
             tapi->cancel_order(this->account_id.c_str(), ord.code.c_str(), ord.entrust_no.c_str());
             count++;
         }
@@ -140,13 +141,15 @@ int RBreakerStralet::cancel_unfinished_order()
 
 void RBreakerStralet::place_order(const string& code, double price, int64_t size, const string action)
 {
-    ctx()->logger(INFO) << "place order: " << code << "," << price << "," << size << "," << action << endl;
+    DateTime dt;
+    m_ctx->cur_time(&dt);
+    ctx()->logger(INFO) << dt.date <<"," << dt.time <<", place order: " << code << "," << price << "," << size << "," << action << endl;
     auto r = m_ctx->trade_api()->place_order(account_id.c_str(), code.c_str(),price, size, action.c_str(), 0);
     if (!r.value)
         ctx()->logger(ERROR) << "place_order error:" << r.msg << endl;;
 }
 
-void RBreakerStralet::on_bar(const char* cycle, shared_ptr<Bar> bar) 
+void RBreakerStralet::on_bar(const char* cycle, shared_ptr<const Bar> bar)
 {
     if (strcmp(cycle, "1m")) return;
     if (bar->code != this->contract) return;

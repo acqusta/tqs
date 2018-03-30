@@ -47,11 +47,11 @@ public:
     {
     }
 
-    virtual CallResult<const vector<MarketQuote>> tick(const char* code, int trading_day) override;
-    virtual CallResult<const vector<Bar>>         bar(const char* code, const char* cycle, int trading_day, bool align) override;
-    virtual CallResult<const vector<DailyBar>>    daily_bar(const char* code, const char* price_adj, bool align) override;
-    virtual CallResult<const MarketQuote>         quote(const char* code) override;
-    virtual CallResult<const vector<string>>      subscribe(const vector<string>& codes) override;
+    virtual CallResult<const vector<MarketQuote>> tick       (const string& code, int trading_day) override;
+    virtual CallResult<const vector<Bar>>         bar        (const string& code, const string& cycle, int trading_day, bool align) override;
+    virtual CallResult<const vector<DailyBar>>    daily_bar  (const string& code, const string& price_adj, bool align) override;
+    virtual CallResult<const MarketQuote>         quote      (const string& code) override;
+    virtual CallResult<const vector<string>>      subscribe  (const vector<string>& codes) override;
     virtual CallResult<const vector<string>>      unsubscribe(const vector<string>& codes) override;
 
     virtual void set_callback(DataApi_Callback* callback) override;

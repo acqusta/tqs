@@ -63,56 +63,56 @@ CallResult<const vector<AccountInfo>> SimTradeApi::query_account_status()
     return CallResult<const vector<AccountInfo>>(infos);
 }
 
-CallResult<const Balance> SimTradeApi::query_balance(const char* account_id)
+CallResult<const Balance> SimTradeApi::query_balance(const string& account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_balance() :
         CallResult<const Balance>("-1,no such account");
 }
 
-CallResult<const vector<Order>> SimTradeApi::query_orders(const char* account_id)
+CallResult<const vector<Order>> SimTradeApi::query_orders(const string& account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_orders() :
         CallResult<const vector<Order>>("-1,no such account");
 }
 
-CallResult<const vector<Trade>> SimTradeApi::query_trades(const char* account_id)
+CallResult<const vector<Trade>> SimTradeApi::query_trades(const string& account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_trades() :
         CallResult<const vector<Trade>>("-1,no such account");
 }
 
-CallResult<const vector<Position>> SimTradeApi::query_positions(const char* account_id)
+CallResult<const vector<Position>> SimTradeApi::query_positions(const string& account_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->query_positions() :
         CallResult<const vector<Position>>("-1,no such account");
 }
 
-CallResult<const OrderID> SimTradeApi::place_order(const char* account_id, const char* code, double price, int64_t size, const char* action, int order_id)
+CallResult<const OrderID> SimTradeApi::place_order(const string& account_id, const string& code, double price, int64_t size, const string& action, int order_id)
 {
     auto act = m_ctx->get_account(account_id);
     return act ? act->place_order(code, price, size, action, order_id):
         CallResult<const OrderID>("-1,no such account");
 }
 
-CallResult<bool> SimTradeApi::cancel_order(const char* account_id, const char* code, int order_id)
+CallResult<bool> SimTradeApi::cancel_order(const string& account_id, const string& code, int order_id)
 {
     // XXX only works if entrust_no can be constructed by order_id!
     char entrust_no[100]; sprintf(entrust_no, "sim-%d", order_id);
     return cancel_order(account_id, code, entrust_no);
 }
 
-CallResult<bool> SimTradeApi::cancel_order(const char* account_id, const char* code, const char* entrust_no)
+CallResult<bool> SimTradeApi::cancel_order(const string& account_id, const string& code, const string& entrust_no)
 {
     auto act = get_account(account_id);
     return act ? act->cancel_order(code, entrust_no) :
         CallResult<bool>("-1,no such account");
 }
 
-CallResult<string> SimTradeApi::query(const char* account_id, const char* command, const char* params)
+CallResult<string> SimTradeApi::query(const string& account_id, const string& command, const string& params)
 {
     //// TODO: load commands from configuration.
     //if (strcmp(command, "ctp_codetable") == 0) {
@@ -128,24 +128,6 @@ CallResult<string> SimTradeApi::query(const char* account_id, const char* comman
 void SimTradeApi::set_callback(TradeApi_Callback* callback)
 {
 
-}
-
-
-CallResult<vector<NetPosition>> SimTradeApi::query_net_position(const char* account_id)
-{
-    assert(false);
-    return CallResult<vector<NetPosition>>("-1,to be implemented");
-}
-CallResult<string>  SimTradeApi::place_auto_order(const char* account_id, const char* code, int64_t size)
-{
-    assert(false);
-    return CallResult<string>("-1,to be implemented");
-}
-
-CallResult<bool> SimTradeApi::cancel_auto_order(const char* account_id, const char* code, const char* entrust_no)
-{
-    assert(false);
-    return CallResult<bool>("-1,to be implemented");
 }
 
 void SimTradeApi::move_to(int trading_day)
@@ -227,7 +209,7 @@ CallResult<const vector<Position>> SimAccount::query_positions()
     return CallResult<const vector<Position>>(poses);
 }
 
-CallResult<const OrderID> SimAccount::validate_order(const char* code, double price, int64_t size, const char* action)
+CallResult<const OrderID> SimAccount::validate_order(const string& code, double price, int64_t size, const string& action)
 {
     DateTime dt;
     m_ctx->cur_time(&dt);
@@ -237,7 +219,7 @@ CallResult<const OrderID> SimAccount::validate_order(const char* code, double pr
     //    << m_tdata->account_id << "," << code << "," << price << "," << size << "," << action << ","
     //    << "price: " << q->last << "," << q->ask1 << "," << q->bid1 << endl;
 
-    const char *p = strrchr(code, '.');
+    const char *p = strrchr(code.c_str(), '.');
     if (!p)
         return CallResult<const OrderID>("-1,wrong code");
 
@@ -248,7 +230,7 @@ CallResult<const OrderID> SimAccount::validate_order(const char* code, double pr
 
     string mkt(p + 1);
     bool is_open_time = false;
-    if (mkt == "SH" || mkt == "SZ") {
+    if (mkt == "SH" || mkt == "SZ" ||  mkt == "CFE") {
         is_open_time =
             (dt.time >= HMS(9, 30) && dt.time < HMS(11, 30) ||
                 dt.time >= HMS(13, 0) && dt.time < HMS(15, 00));
@@ -296,7 +278,7 @@ CallResult<const OrderID> SimAccount::validate_order(const char* code, double pr
     return CallResult<const OrderID>(oid);
 }
 
-CallResult<const OrderID> SimAccount::place_order(const char* code, double price, int64_t size, const char* action, int order_id)
+CallResult<const OrderID> SimAccount::place_order(const string& code, double price, int64_t size, const string& action, int order_id)
 {
     auto r = validate_order(code, price, size, action);
 
@@ -339,12 +321,14 @@ CallResult<const OrderID> SimAccount::place_order(const char* code, double price
     order->status_msg     = status_msg;
 
     m_tdata->orders[entrust_no] = order;
-    m_ord_status_ind_list.push_back(make_shared<Order>(*order));
+
+    if (r.value)
+        m_ord_status_ind_list.push_back(make_shared<Order>(*order));
 
     return r;
 }
 
-CallResult<bool> SimAccount::cancel_order(const char* code, const char* entrust_no)
+CallResult<bool> SimAccount::cancel_order(const string& code, const string& entrust_no)
 {
     //cout << "cancel_order: " << m_tdata->account_id << "," << code << "," << entrust_no << endl;
 

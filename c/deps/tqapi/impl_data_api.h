@@ -42,7 +42,7 @@ namespace tquant { namespace api { namespace impl {
         string                m_source;
         unordered_map<string, SubInfo> m_sub_info_map;
     public:
-        DataApiImpl(mprpc::MpRpcClient* client, const char* source) 
+        DataApiImpl(mprpc::MpRpcClient* client, const string& source) 
             : m_client(client)
             , m_callback(nullptr)
             , m_source(source)
@@ -51,7 +51,7 @@ namespace tquant { namespace api { namespace impl {
         virtual ~DataApiImpl() override
         {}
 
-        virtual CallResult<const vector<MarketQuote>> tick(const char* code, int trading_day) override
+        virtual CallResult<const vector<MarketQuote>> tick(const string& code, int trading_day) override
         {
             mprpc::MsgPackPacker pk;
             pk.pack_map(4);
@@ -78,7 +78,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<MarketQuote>>(ticks);
         }
 
-        virtual CallResult<const vector<Bar>> bar(const char* code, const char* cycle, int trading_day, bool align) override
+        virtual CallResult<const vector<Bar>> bar(const string& code, const string& cycle, int trading_day, bool align) override
         {
             MsgPackPacker pk;
             pk.pack_map(6);
@@ -107,7 +107,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<Bar>>(bars);
         }
 
-        virtual CallResult<const vector<DailyBar>> daily_bar(const char* code, const char* price_adj, bool align) override
+        virtual CallResult<const vector<DailyBar>> daily_bar(const string& code, const string& price_adj, bool align) override
         {
             MsgPackPacker pk;
             pk.pack_map(6);
@@ -137,7 +137,7 @@ namespace tquant { namespace api { namespace impl {
             return CallResult<const vector<DailyBar>>(bars);
         }
 
-        virtual CallResult<const MarketQuote> quote(const char* code) override
+        virtual CallResult<const MarketQuote> quote(const string& code) override
         {
             MsgPackPacker pk;
             pk.pack_map(3);

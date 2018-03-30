@@ -31,7 +31,7 @@ public:
     SimDataApi*  sim_dapi() { return m_dapi; }
     SimTradeApi* sim_tapi() { return m_tapi; }
 
-    SimAccount*  get_account(const char* account_id);
+    SimAccount*  get_account(const string& account_id);
 
     void move_to(int trading_day);
     void run_one_day(Stralet* stralet);
@@ -44,8 +44,8 @@ public:
     virtual system_clock::time_point cur_time() override;
     virtual void post_event(const char* evt, void* data) override;
 
-    virtual void set_timer(int32_t id, int32_t delay, void* data) override;
-    virtual void kill_timer(int32_t id) override;
+    virtual void set_timer (Stralet* stralet, int32_t id, int32_t delay, void* data) override;
+    virtual void kill_timer(Stralet* stralet, int32_t id) override;
 
     virtual DataApi*  data_api(const char* source = nullptr) override;
     virtual TradeApi* trade_api() override;
@@ -55,6 +55,9 @@ public:
     virtual string get_parameter(const char* name, const char* def_value) override;
 
     virtual string mode() override;
+
+    virtual void register_algo(AlgoStralet* algo) override;
+    virtual void unregister_algo(AlgoStralet* algo) override;
 
 private:
     SimDataApi*  m_dapi;
@@ -66,14 +69,16 @@ private:
     DateTime m_now;
 
     struct TimerInfo {
-        int32_t id;
-        int32_t delay;
-        void*   data;
-        bool    is_dead;
+        Stralet* stralet;
+        int32_t  id;
+        int32_t  delay;
+        void*    data;
+        bool     is_dead;
         system_clock::time_point trigger_time;
     };
 
-    unordered_map<int32_t, shared_ptr<TimerInfo>> m_timer_map;
+    vector<shared_ptr<TimerInfo>> m_timers;
+    vector<AlgoStralet*> m_algos;
     Stralet* m_stralet;
 };
 
