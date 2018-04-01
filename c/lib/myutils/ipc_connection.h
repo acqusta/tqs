@@ -95,8 +95,14 @@ namespace myutils {
         void clear_data();
         void check_connection();
 
+        inline void set_conn_stat(bool connected) {
+            unique_lock<mutex> lock(m_send_mtx);
+            m_connected = connected;
+        }
+
     private:
         string                      m_addr;
+        int64_t                     m_timeout;
         mutex                       m_send_mtx;
         Connection_Callback*        m_callback;
         volatile bool               m_should_exit;

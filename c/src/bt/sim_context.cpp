@@ -90,14 +90,19 @@ TradeApi* SimStraletContext::trade_api()
 
 ostream& SimStraletContext::logger(LogLevel level)
 {
-    static const char* str_lavel[] = {
-        "[INFO ] ",
-        "[WARN ] ",
-        "[ERROR] ",
-        "[FATAL] "
+    static const char* str_level[] = {
+        "I",
+        "W",
+        "E",
+        "F"
     };
 
-    cout << str_lavel[level];
+    DateTime now;
+    cur_time(&now);
+    char label[100];
+    
+    sprintf(label, "%08d %06d.%03d %s| ", now.date, now.time / 1000, now.time % 1000, str_level[level]);
+    cout << label;
     return cout;
 }
 

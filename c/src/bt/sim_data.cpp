@@ -77,7 +77,6 @@ CallResult<const vector<DailyBar>> SimDataApi::daily_bar(const string& code, con
             return CallResult<const vector<DailyBar> > ("-1,no data");
         else {
             auto new_bars = make_shared<vector<DailyBar>>(bars->begin(), it-1);
-            cout << new_bars->size() << "," << bars->size() << "," << it->date << endl;
             return CallResult<const vector<DailyBar>>(new_bars);
         }
     }

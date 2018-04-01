@@ -57,7 +57,7 @@ Stralet* create_rbreaker();
 int test2() 
 {
     BackTestConfig cfg;
-    //cfg.dapi_addr = "tcp://127.0.0.1:10001";
+    cfg.dapi_addr = "tcp://127.0.0.1:10001";
     cfg.begin_date = 20170101;
     cfg.end_date = 20180321;
     cfg.data_level = "1m";
@@ -101,9 +101,10 @@ Stralet *create_ifhft();
 int test_ifhft()
 {
     BackTestConfig cfg;
-    cfg.dapi_addr = "tcp://127.0.0.1:10001";
-    cfg.begin_date = 20180327;
-    cfg.end_date = 20180329;
+    //cfg.dapi_addr = "tcp://127.0.0.1:10001";
+    cfg.dapi_addr = "ipc://tqc_10001?timeout=30";
+    cfg.begin_date = 20180101;
+    cfg.end_date = 20180330;
     cfg.data_level = "tk";
     cfg.accounts.push_back(AccountConfig("sim", 1e8));
 

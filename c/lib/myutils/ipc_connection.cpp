@@ -156,7 +156,8 @@ bool SharedSemaphore::post()
 }
 
 IpcConnection::IpcConnection()
-    : m_callback(nullptr)
+    : m_timeout(0)
+    , m_callback(nullptr)
     , m_should_exit(false)
     , m_connected(false)
     , m_my_id(0)
@@ -183,27 +184,32 @@ void IpcConnection::recv_run()
     auto last_idle_time = system_clock::now();
     while (!m_should_exit) {
         if (m_slot->client_id != m_my_id)  break;
-        if (now_ms() - m_slot->svr_update_time > 2000) break;
+        if ((int64_t)now_ms() - (int64_t)m_slot->svr_update_time > 5000 + m_timeout) break;
 
         switch (m_sem_recv->timed_wait(100)) {
         case 1:
-            msg_loop().PostTask([this]() { do_recv(); });
+            m_slot->client_update_time = now_ms() + m_timeout;
+            msg_loop().PostTask([this]() {
+                do_recv(); 
+            });
             break;
         case 0:
-            m_slot->client_update_time = now_ms();
+            m_slot->client_update_time = now_ms() + m_timeout;
             break;
         default:
             break;
         }
 
         if (system_clock::now() - last_idle_time > seconds(1)) {
-            msg_loop().PostTask([this]() { if (m_callback) m_callback->on_idle(); });
+            msg_loop().PostTask([this]() {
+                if (m_callback) m_callback->on_idle(); 
+            });
         }
     }
     
     msg_loop().PostTask([this]() {
         if (m_connected) {
-            m_connected = false;
+            set_conn_stat(false);
             if (m_callback) m_callback->on_conn_status(false);
             do_connect();
         }
@@ -256,7 +262,7 @@ bool IpcConnection::connect(const string& addr, Connection_Callback* callback)
 void IpcConnection::reconnect()
 {
     m_msg_loop.PostTask([this] {
-        m_connected = false;
+        set_conn_stat(false);
         do_connect();
     });
 }
@@ -319,7 +325,21 @@ bool IpcConnection::do_connect()
     clear_data();
 
     do {
-        string addr = string("shm_tqc_v2_") + m_addr.substr(6);
+        vector<string> ss;
+        split(m_addr, "?", &ss);
+        if (ss.size() == 2) {
+            vector<string> tmp;
+            split(ss[1], ",", &tmp);
+            for (auto s : tmp) {
+                if (strncmp(s.c_str(), "timeout=", 8) == 0) {
+                    m_timeout = atoll(s.c_str() + 8) * 1000;
+                }
+            }
+        }
+        else {
+            m_timeout = 0;
+        }
+        string addr = string("shm_tqc_v2_") + ss[0].substr(6);
         m_svr_shmem = new myutils::FileMapping();
         if (!m_svr_shmem) break;
         if (!m_svr_shmem->open_shmem(addr, sizeof(ConnectionSlotInfo), false)) {
@@ -349,7 +369,7 @@ bool IpcConnection::do_connect()
 
         {
             uint64_t exp = 0;
-            if (!m_slot->client_update_time.compare_exchange_strong(exp, now_ms())) {
+            if (!m_slot->client_update_time.compare_exchange_strong(exp, now_ms() + m_timeout)) {
                 //std::cerr << "update_time is not zero" << endl;
                 break;
             }
@@ -393,7 +413,7 @@ bool IpcConnection::do_connect()
         m_recv_queue = (ShmemQueue*)(m_my_shmem->addr() + head->send_offset);
         m_recv_queue->init(head->send_size);
 
-        m_connected = true;
+        set_conn_stat(true);
         m_should_exit = false;
         m_recv_thread = new thread(bind(&IpcConnection::recv_run, this));
 
@@ -428,6 +448,7 @@ void IpcConnection::send(const char* data, size_t size)
             m_sem_send->post();
         }
         else {
+            cout << "send error: failed to push\n";
             msg_loop().PostTask([this]() {
                 if (m_connected) {
                     m_connected = false;
@@ -436,6 +457,9 @@ void IpcConnection::send(const char* data, size_t size)
                 }
             });
         }
+    }
+    else {
+        cout << "send error: no connection\n";
     }
 }
 

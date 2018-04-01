@@ -16,8 +16,8 @@ using namespace tquant::stra;
 class SimStraletContext;
 
 struct TickCache {
-    int64_t pos;
-    int64_t size;
+    int64_t       pos;
+    int64_t       size;
     MarketQuote** first;
     MarketQuote** last;
     shared_ptr<const vector<MarketQuote>> ticks;
@@ -26,16 +26,18 @@ struct TickCache {
 struct BarTickCache {
     int64_t pos;
     int64_t size;
-    Bar** first;
-    Bar** last;
+    Bar**   first;
+    Bar**   last;
     shared_ptr<const vector<Bar>> bars;
 };
 
-struct DailyBarTickCache {
-    int64_t pos;
-    int64_t size;
-    shared_ptr<const vector<DailyBar>> bars;
-};
+//struct DailyBarCache {
+//    int64_t    pos;
+//    int64_t    size;
+//    DailyBar** first;
+//    DailyBar** last;
+//    shared_ptr<const vector<DailyBar>> bars;
+//};
 
 class SimDataApi : public DataApi {
     friend SimStraletContext;
@@ -72,6 +74,7 @@ private:
     DataApi* m_dapi;
     unordered_map<string, TickCache>    m_tick_caches;
     unordered_map<string, BarTickCache> m_bar_caches;
+    //unordered_map<string, DailyBarCache> m_dailybar_caches;
     unordered_set<string> m_codes;
 };
 

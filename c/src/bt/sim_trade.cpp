@@ -101,7 +101,7 @@ CallResult<const OrderID> SimTradeApi::place_order(const string& account_id, con
 CallResult<bool> SimTradeApi::cancel_order(const string& account_id, const string& code, int order_id)
 {
     // XXX only works if entrust_no can be constructed by order_id!
-    char entrust_no[100]; sprintf(entrust_no, "sim-%d", order_id);
+    char entrust_no[100]; sprintf(entrust_no, "sim-%.6d", order_id);
     return cancel_order(account_id, code, entrust_no);
 }
 
@@ -270,7 +270,7 @@ CallResult<const OrderID> SimAccount::validate_order(const string& code, double 
 
     int32_t my_order_id = ++g_order_id;
     Order ord;
-    char entrust_no[100]; sprintf(entrust_no, "sim-%d", my_order_id);
+    char entrust_no[100]; sprintf(entrust_no, "sim-%.6d", my_order_id);
 
     auto oid = make_shared<OrderID>();
     oid->entrust_no = entrust_no;
@@ -294,7 +294,7 @@ CallResult<const OrderID> SimAccount::place_order(const string& code, double pri
     }
     else {
         my_order_id = ++g_order_id;
-        char tmp[100]; sprintf(tmp, "sim-%d", my_order_id);
+        char tmp[100]; sprintf(tmp, "sim-%.6d", my_order_id);
         entrust_no = tmp;
         status = OS_Rejected;
         status_msg = r.msg;
@@ -452,7 +452,7 @@ void SimAccount::make_trade(double fill_price, Order* order)
 
     int32_t fill_id = ++g_fill_id;
     char fill_no[100];
-    sprintf(fill_no, "sim-t-%d", fill_id);
+    sprintf(fill_no, "sim-t-%.6d", fill_id);
 
     auto trade = make_shared<Trade>();
     trade->account_id     = m_tdata->account_id;
