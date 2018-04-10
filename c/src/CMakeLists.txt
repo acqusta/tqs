@@ -16,6 +16,7 @@ set(SRC
   bt/demo_doublema.cpp
   bt/demo_ifhft.cpp
   algo/algo_pm.cpp
+  algo/algo_pm.h
   algo/algo_twap.cpp
   algo/algo_vwap.cpp
   stralet.cpp

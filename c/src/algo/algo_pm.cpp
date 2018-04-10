@@ -8,6 +8,7 @@
 #include <assert.h>
 #include "stralet.h"
 #include "algo.h"
+#include "algo_pm.h"
 
 
 namespace tquant { namespace stra {
@@ -58,7 +59,7 @@ namespace tquant { namespace stra {
         }
     }
 
-    class PorfolioManagerAlgoImpl {
+    class PorfolioManagerAlgoImpl : public AlgoStralet {
         struct Task;
         struct OrderInfo {
             OrderID order_id;
@@ -99,14 +100,14 @@ namespace tquant { namespace stra {
 
         void on_fini            () { }
         void on_timer           (int32_t id, void* data);
-        void on_order_status    (shared_ptr<Order> order);
-        void on_order_trade     (shared_ptr<Trade> trade);
-        void on_account_status  (shared_ptr<AccountInfo> account);
+        void on_order_status    (shared_ptr<const Order> order);
+        void on_order_trade     (shared_ptr<const Trade> trade);
+        void on_account_status  (shared_ptr<const AccountInfo> account);
 
         void init(const string& account_id, const vector<string>& codes);
 
-        CallResult<vector<NetPosition>> query_net_position();
-        CallResult<vector<Position>>    query_position();
+        CallResult<const vector<NetPosition>> query_net_position();
+        CallResult<const vector<Position>>    query_position();
 
         void set_target(const vector<NetPosition>& target);
         void stop_target();
@@ -115,7 +116,7 @@ namespace tquant { namespace stra {
 
         // return task_id, not entrust_id
         CallResult<int64_t>  place_order (const string& code, double price, int64_t inc_size);
-        CallResult<bool>    cancel_order (const string& code, int64_t task_id);
+        CallResult<bool>     cancel_order (const string& code, int64_t task_id);
 
         void sync_positions();
 
@@ -194,7 +195,7 @@ namespace tquant { namespace stra {
         }
     }
 
-    CallResult<vector<NetPosition>> PorfolioManagerAlgoImpl::query_net_position()
+    CallResult<const vector<NetPosition>> PorfolioManagerAlgoImpl::query_net_position()
     {
         auto net_positions = make_shared<vector<NetPosition>>();
         for (auto& e : m_positions) {
@@ -218,7 +219,7 @@ namespace tquant { namespace stra {
         return net_positions;
     }
 
-    CallResult<vector<Position>> PorfolioManagerAlgoImpl::query_position()
+    CallResult<const vector<Position>> PorfolioManagerAlgoImpl::query_position()
     {
         auto positions = make_shared<vector<Position>>();
         for (auto& e : m_positions) {
@@ -238,12 +239,12 @@ namespace tquant { namespace stra {
         return positions;
     }
 
-    void PorfolioManagerAlgoImpl::on_order_status(shared_ptr<Order> order)
+    void PorfolioManagerAlgoImpl::on_order_status(shared_ptr<const Order> order)
     {
         // TODO: orders and trades?
     }
 
-    void PorfolioManagerAlgoImpl::on_order_trade(shared_ptr<Trade> trade)
+    void PorfolioManagerAlgoImpl::on_order_trade(shared_ptr<const Trade> trade)
     {
         if (trade->fill_size == 0) return;
 
@@ -299,19 +300,19 @@ namespace tquant { namespace stra {
         }
     }
 
-    void PorfolioManagerAlgoImpl::on_account_status(shared_ptr<AccountInfo> account)
+    void PorfolioManagerAlgoImpl::on_account_status(shared_ptr<const AccountInfo> account)
     {
-        // TODO: sync if reconnect
+        // TODO:
     }
 
     void PorfolioManagerAlgoImpl::set_target(const vector<NetPosition>& target)
     {
-
+        // TODO:
     }
 
     void PorfolioManagerAlgoImpl::stop_target()
     {
-
+        // TODO:
     }
 
     bool PorfolioManagerAlgoImpl::is_stopped()
@@ -456,5 +457,84 @@ namespace tquant { namespace stra {
         return it != m_positions.end() ? it->second : nullptr;
     }
 
+    PorfolioManagerAlgo::PorfolioManagerAlgo()
+    {
+        m_impl = new PorfolioManagerAlgoImpl();
+    }
+
+    PorfolioManagerAlgo::~PorfolioManagerAlgo()
+    {
+        delete m_impl;
+    }
+
+
+    void PorfolioManagerAlgo::on_init(StraletContext* sc)
+    {
+        AlgoStralet::on_init(sc);
+        m_impl->on_init(this, sc);
+    }
+
+    void PorfolioManagerAlgo::on_timer(int32_t id, void* data)
+    {
+        m_impl->on_timer(id, data);
+    }
+
+    void PorfolioManagerAlgo::on_order_status(shared_ptr<const Order> order)
+    {
+        m_impl->on_order_status(order);
+    }
+
+    void PorfolioManagerAlgo::on_order_trade(shared_ptr<const Trade> trade)
+    {
+        m_impl->on_order_trade(trade);
+    }
+
+    void PorfolioManagerAlgo::on_account_status(shared_ptr<const AccountInfo> account)
+    {
+        m_impl->on_account_status(account);
+    }
+
+    void PorfolioManagerAlgo::init(const string& account_id, const vector<string>& codes)
+    {
+        m_impl->init(account_id, codes);
+    }
+
+
+    CallResult<const vector<NetPosition>> PorfolioManagerAlgo::query_net_position()
+    {
+        return m_impl->query_net_position();
+    }
+
+    CallResult<const vector<Position>> PorfolioManagerAlgo::query_position()
+    {
+        return m_impl->query_position();
+    }
+
+    void PorfolioManagerAlgo::set_target(const vector<NetPosition>& target)
+    {
+        return m_impl->set_target(target);
+    }
+
+    void PorfolioManagerAlgo::stop_target()
+    {
+        m_impl->stop_target();
+    }
+
+    bool PorfolioManagerAlgo::is_stopped()
+    {
+        return m_impl->is_stopped();
+    }
+
+
+    // return task_id, not entrust_id
+    CallResult<int64_t>  PorfolioManagerAlgo::place_order(const string& code, double price, int64_t inc_size)
+    {
+        return m_impl->place_order(code, price, inc_size);
+    }
+
+    CallResult<bool>     PorfolioManagerAlgo::cancel_order(const string& code, int64_t task_id)
+    {
+        return m_impl->cancel_order(code, task_id);
+    }
 
 } }
