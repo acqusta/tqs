@@ -175,9 +175,13 @@ SimAccount* SimStraletContext::get_account(const string& account_id)
     auto it = m_tapi->m_accounts.find(account_id);
     return it != m_tapi->m_accounts.end() ? it->second : nullptr;
 }
+
 void SimStraletContext::run_one_day(Stralet* stralet)
 {
     DateTime end_dt(m_trading_day, HMS(15, 0, 0));
+
+    // FIXME: ²»Ö§³ÖÒ¹ÅÌ¡£
+    set_sim_time(DateTime(m_trading_day, HMS(8, 50)));
 
     stralet->on_init(this);
 
@@ -186,8 +190,7 @@ void SimStraletContext::run_one_day(Stralet* stralet)
         m_dapi->calc_nex_time(&dt1);
         calc_next_timer_time(&dt2);
 
-        m_now = dt1.cmp(dt2) < 0 ? dt1 : dt2;
-        m_now_tp = dt_to_tp(m_now.date, m_now.time);
+        set_sim_time(dt1.cmp(dt2) < 0 ? dt1 : dt2);
 
         m_tapi->try_match();
 

@@ -5,6 +5,7 @@
 #include <list>
 #include "stralet.h"
 #include "tquant_api.h"
+#include "backtest.h"
 
 using namespace tquant::api;
 using namespace tquant::stra;
@@ -27,7 +28,9 @@ class SimAccount {
     friend SimStraletContext;
     friend SimTradeApi;
 public:
-    SimAccount(SimStraletContext* ctx, const string& account_id, double init_balance);
+    SimAccount(SimStraletContext* ctx, const string& account_id,
+               double init_balance,
+               const vector<Holding> & holdings);
 
     CallResult<const Balance>             query_balance();
     CallResult<const vector<Order>>       query_orders();

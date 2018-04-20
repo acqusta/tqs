@@ -237,28 +237,34 @@ void SimDataApi::set_callback(DataApi_Callback* callback)
 
 void SimDataApi::calc_nex_time(DateTime* dt)
 {
-    int date = 99999999, time = 0;
+    int32_t date = m_ctx->trading_day();
+    int32_t time = 160000000;
 
     for (auto& e : m_bar_caches) {
         auto cache = &e.second;
-        const Bar* bar = (cache->pos + 1 < cache->size) ?
-                        cache->bars->data() + cache->pos + 1 :
-                        cache->bars->data() + cache->pos;
+        //const Bar* bar = (cache->pos + 1 < cache->size) ?
+        //                cache->bars->data() + cache->pos + 1 :
+        //                cache->bars->data() + cache->pos;
 
-        if (cmp_time(date, time, bar->date, bar->time) > 0) {
-            date = bar->date;
-            time = bar->time;
+        if (cache->pos + 1 < cache->size) {
+            const Bar* bar = cache->bars->data() + cache->pos + 1;
+            if (cmp_time(date, time, bar->date, bar->time) > 0) {
+                date = bar->date;
+                time = bar->time;
+            }
         }
     }
+
     for (auto& e : m_tick_caches) {
         auto cache = &e.second;
-        const MarketQuote* q = (cache->pos + 1 < cache->size) ?
-                                cache->ticks->data() + cache->pos + 1 :
-                                cache->ticks->data() + cache->pos;
+        if (cache->pos + 1 < cache->size) {
+            const MarketQuote* q = cache->ticks->data() + cache->pos + 1;
+            //nullptr; // cache->ticks->data() + cache->pos;
 
-        if (cmp_time(date, time, q->date, q->time) > 0) {
-            date = q->date;
-            time = q->time;
+            if (cmp_time(date, time, q->date, q->time) > 0) {
+                date = q->date;
+                time = q->time;
+            }
         }
     }
 

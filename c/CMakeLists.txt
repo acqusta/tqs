@@ -2,9 +2,10 @@ project(tqs)
 
 cmake_minimum_required(VERSION 2.8)
 
-option(BUILD_WIN64 "Build Win64" ON)
-option(BUILD_JAVA "Build Java" OFF)
-option(BUILD_PYTHON "Build Python" OFF)
+option(BUILD_WIN64   "Build Win64" ON)
+option(BUILD_JAVA    "Build Java" OFF)
+option(BUILD_PYTHON  "Build Python" OFF)
+option(BUILD_MYWORK  "Build MyWork" OFF)
 
 set(CMAKE_INSTALL_PREFIX dist)
 set(BUILD_TQS 1)
@@ -13,6 +14,7 @@ include_directories(
   lib/
   lib/msgpack/include
   deps/tqapi
+  src
 )
 
 link_directories( ${CMAKE_SOURCE_DIR}/deps/tqapi )
@@ -82,6 +84,11 @@ endif()
 if (BUILD_PYTHON)
   add_subdirectory(pyext)
 endif()
+
+if (BUILD_MYWORK)
+  add_subdirectory(mywork)
+endif()
+
 
 #set (CMAKE_BUILD_CONFIG ${CMAKE_BUILD_TYPE})
 #install(FILES deps/tqapi/Debug/tqapi.dll DESTINATION bin)

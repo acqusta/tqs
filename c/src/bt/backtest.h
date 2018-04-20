@@ -11,13 +11,28 @@ using namespace std;
 
 using namespace tquant::stra;
 
+struct Holding {
+    string  code;
+    string  side;
+    int64_t size;
+    double  cost_price;
+};
+
 struct AccountConfig {
-    string account_id;
-    double init_balance;
+    string           account_id;
+    double           init_balance;
+    vector<Holding>  init_holdings;
+
 
     AccountConfig(const string& a_account_id, double a_init_balance)
         : account_id(a_account_id)
         , init_balance(a_init_balance)
+    {}
+
+    AccountConfig(const string& a_account_id, double a_init_balance, const vector<Holding>& a_init_holdings)
+    : account_id(a_account_id)
+        , init_balance(a_init_balance)
+        , init_holdings(a_init_holdings)
     {}
 };
 

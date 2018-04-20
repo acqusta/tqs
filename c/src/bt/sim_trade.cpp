@@ -142,7 +142,9 @@ void SimTradeApi::try_match()
     for (auto & e : m_accounts) { e.second->try_match(); };
 }
 
-SimAccount::SimAccount(SimStraletContext* ctx, const string& account_id, double init_balance)
+SimAccount::SimAccount(SimStraletContext* ctx, const string& account_id,
+                       double init_balance,
+                       const vector<Holding> & holdings)
 {
     m_ctx = ctx;
     auto tdata = make_shared<TradeData>();
@@ -151,6 +153,16 @@ SimAccount::SimAccount(SimStraletContext* ctx, const string& account_id, double 
     tdata->enable_balance = init_balance;
     tdata->frozen_balance = 0.0;
     tdata->trading_day    = 0;
+
+    for (auto& h : holdings) {
+        auto pos = make_shared<Position>();
+        pos->account_id  = account_id;
+        pos->code        = h.code;
+        pos->enable_size = pos->current_size = pos->init_size = h.size;
+        pos->cost_price  = h.cost_price * h.size;
+        pos->cost        = h.cost_price * h.size;
+        tdata->positions[h.code + "-" + h.side] = pos;
+    }
 
     m_tdata = tdata;
     m_his_tdata.push_back(m_tdata);

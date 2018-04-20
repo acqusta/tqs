@@ -22,7 +22,7 @@ void bt_run(const BackTestConfig & a_cfg, function<Stralet*()> creator)
 {
     BackTestConfig cfg = a_cfg;
     if (cfg.dapi_addr.empty())  cfg.dapi_addr = "ipc://tqc_10001";// "tcp://127.0.0.1:10001";
-    if (cfg.accounts.empty())   cfg.accounts.push_back(AccountConfig("sim", 1e8));
+    if (cfg.accounts.empty())   cfg.accounts.push_back(AccountConfig("sim", 1e8, vector<Holding>()));
     if (cfg.data_level.empty()) cfg.data_level = "tk";
     if (cfg.result_dir.empty()) cfg.result_dir = "result";
     
@@ -35,7 +35,7 @@ void bt_run(const BackTestConfig & a_cfg, function<Stralet*()> creator)
     SimStraletContext* sc = new SimStraletContext();
     vector<SimAccount*> accounts;
     for (auto& e : cfg.accounts) {
-        SimAccount* act = new SimAccount(sc, e.account_id, e.init_balance);
+        SimAccount* act = new SimAccount(sc, e.account_id, e.init_balance, e.init_holdings);
         accounts.push_back(act);
     }
 
