@@ -437,15 +437,23 @@ void SimAccount::make_trade(double fill_price, Order* order)
         pos->cost_price = pos->cost / pos->current_size;
 
         m_tdata->frozen_balance -= order->entrust_size * order->entrust_price;
-        m_tdata->enable_balance -= order->entrust_size * fill_price;
+        m_tdata->enable_balance -= fill_size * fill_price;
+        //this->m_ctx->logger() << "enable_balance -= " << fill_size * fill_price << endl;
     }
     else {
         pos->frozen_size -= order->entrust_size;
         pos->current_size -= fill_size;
         pos->enable_size  -= fill_size; // TODO: check if it is right
         assert(pos->enable_size >= 0);
-        pos->close_pnl += fill_size * (fill_price - pos->cost_price);
-        m_tdata->enable_balance += fill_size * fill_price;
+        if (pos->side == SD_Long) {
+            pos->close_pnl += fill_size * (fill_price - pos->cost_price);
+            m_tdata->enable_balance += fill_size * fill_price;
+        }
+        else {
+            pos->close_pnl += fill_size * (pos->cost_price - fill_price);
+            m_tdata->enable_balance += fill_size * (pos->cost_price*2 - fill_price);
+        }
+        //this->m_ctx->logger() << "enable_balance += " << fill_size * fill_price << endl;
         if (pos->current_size == 0) {
             pos->cost = 0.0;
             pos->cost_price = 0.0;
@@ -613,7 +621,6 @@ void SimAccount::save_data(const string& dir)
         for (auto& tdata : m_his_tdata) {
             out << setprecision(4) << fixed
                 << tdata->account_id << ","
-                << tdata->account_id << ","
                 << tdata->trading_day << ","
                 << tdata->init_balance << ","
                 << tdata->enable_balance << ","
@@ -630,7 +637,7 @@ void SimAccount::save_data(const string& dir)
             cerr << "Can't open file " << ss.str();
             return;
         }
-        out << "account_id,trading_day,code,name,init_size,current_size,enable_size,frozen_size,today_size,"
+        out << "account_id,trading_day,code,name,side,init_size,current_size,enable_size,frozen_size,today_size,"
             << "cost,cost_price,close_pnl,float_pnl,margin,commission\n";
         for (auto& tdata : m_his_tdata) {
             vector<shared_ptr<Position>> positions;
@@ -645,7 +652,7 @@ void SimAccount::save_data(const string& dir)
                 out << setprecision(4) << fixed
                     << tdata->account_id << ","
                     << tdata->trading_day << ","
-                    << pos->code << "," << pos->name << ","
+                    << pos->code << "," << pos->name << "," << pos->side << ","
                     << pos->init_size << "," << pos->current_size << ","
                     << pos->enable_size << "," << pos->frozen_size << "," << pos->today_size << ","
                     << pos->cost << "," << pos->cost_price << "," << pos->close_pnl << "," << pos->float_pnl << ","

@@ -123,6 +123,8 @@ CallResult<const vector<string>> SimDataApi::subscribe(const vector<string>& cod
     DateTime dt;
     m_ctx->cur_time(&dt);
 
+    m_dapi->subscribe(codes);
+
     if (m_ctx->data_level() == BT_BAR1M || m_ctx->data_level() == BT_TICK) {
         for (auto& code : codes) {
             if (m_bar_caches.find(code) != m_bar_caches.end()) continue;
